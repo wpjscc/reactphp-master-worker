@@ -1,0 +1,22 @@
+{
+    "name": "wpjscc/reactphp-master-worker",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Wpjscc\\MasterWorker\\": "src/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "wpjscc",
+            "email": "wpjscc@gmail.com"
+        }
+    ],
+    "require": {
+        "react/socket": "^1.13",
+        "clue/ndjson-react": "^1.3"
+    }
+}
