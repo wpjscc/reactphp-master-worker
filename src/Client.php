@@ -19,6 +19,10 @@ class Client extends EventEmitter
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
         $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
         $this->on('worker_broadcast', [$this, '_master_broadcast']);
+        $this->on('worker_isOnline_Id', [$this, '_master_isOnline_Id']);
+        $this->on('worker_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
+        $this->on('worker_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
+        $this->on('worker_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
     }
 
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
@@ -30,6 +34,24 @@ class Client extends EventEmitter
         }
         ConnectionManager::instance('client')->sendMessageTo_Id($client_id, $message);
     }
+
+
+    protected function _master_sendToGroup(ConnectionInterface $connection, $data)
+    {
+        $message = $data['message'] ?? '';
+        if (is_array($message)) {
+            $message = json_encode($message);
+        }
+
+        ConnectionManager::instance('client')->sendToGroup(
+            $data['group_id'] ?? '',
+            $message,
+            $data['exclude_ids'] ?? [],
+            $data['exclude__ids'] ?? []
+        );
+
+    }
+
 
     // 在master 中处理
     protected function _master_getOnline_Ids(ConnectionInterface $connection, $data)
@@ -52,6 +74,55 @@ class Client extends EventEmitter
         }
         ConnectionManager::instance('client')->broadcast($message, $data['exclude__ids'] ?? []);
     }
+
+    protected function _master_isOnline_Id(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->isOnline_Id($data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+    protected function _master_joinGroupBy_Id(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->joinGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
+    protected function _master_getGroup_IdCount(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->getGroup_IdCount($data['group_id'] ?? '');
+        var_dump($data, 999999);
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
+    protected function _master_getGroupIdsBy_Id(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->getGroupIdsBy_Id($data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
 
     // 以下在 worker 或 register 中调用
 
@@ -91,9 +162,13 @@ class Client extends EventEmitter
     }
     
 
-    public function getOnlineClientIds() 
+    public function getOnline_Ids()
     {
-        return $this->getOnline_Ids();
+
+        return $this->commonMasterMethod(__FUNCTION__)->then(function($data) {
+            return array_reduce($data, 'array_merge', []);
+        });
+
     }
 
     public function broadcast($message, $exclude_Ids = [])
@@ -130,45 +205,72 @@ class Client extends EventEmitter
         ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
     }
 
-    protected function getOnline_Ids()
+    public function isOnline_Id($_id)
     {
-
-        return $this->commonMasterMethod(__FUNCTION__)->then(function($data) {
-            $ids = [];
-            foreach ($data as $item) {
-                $ids = array_merge($ids, $item);
-            }
-            return $ids;
+        return $this->commonMasterMethod(__FUNCTION__, ['_id' => $_id])->then(function($data){
+            return empty(array_filter($data)) ? false : true;
         });
-
-        $promises = [];
-
-        $event = __FUNCTION__;
-        $messageId = uniqid();
-        $data = [
-            'message_id' => $messageId,
-        ];
-        
-        $keys = ConnectionManager::instance('master')->broadcastToAllGroupOnce([
-            'cmd' => 'worker_message',
-            'data' =>  [
-                "event" => $event,
-                "data" => $data
-            ],
-        ]);
-
-        foreach ($keys as $key) {
-            $defer = new Deferred();
-            $this->once("$event:$messageId:$key", function(ConnectionInterface $connection, $data) use ($defer) {
-                $defer->resolve($data);
-            });
-            $promises[] = $defer->promise();
-        }
-
-        return $promises;
     }
 
-    protected function getJsonPromise($array = [])
+    public function joinGroupBy_Id($group_id, $_id)
+    {
+        $data = [
+            '_id' => $_id,
+            'group_id' => $group_id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            // 加入成功
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            // 已经加入过
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            // 加入失败
+            elseif (in_array(2, $data)) {
+                return 2;
+            }
+            // 不可能出现这个
+            return 3;
+        });
+    }
+
+    public function getGroup_IdCount($group_id)
+    {
+        $data = [
+            'group_id' => $group_id,
+        ];
+        var_dump($data, 888888);
+
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            var_dump($data, 7777);
+            return array_sum($data);
+        });
+    }
+
+    public function getGroupIdsBy_Id($_id)
+    {
+        $data = [
+            '_id' => $_id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            return array_reduce($data, 'array_merge', []);
+        });
+    }
+
+    public function sendToGroup($group_id, $message, $excludeIds = [], $exclude_Ids = [])
+    {
+        $data = [
+            'group_id' => $group_id,
+            'exclude_ids' => $excludeIds,
+            'exclude__ids' => $exclude_Ids,
+            'message' => $message,
+        ];
+        return $this->commonClientMethod(__FUNCTION__, $data);
+    }
+
+    public function getJsonPromise($array = [])
     {
         $deferred = new Deferred();
         $buffer = '';
@@ -204,6 +306,8 @@ class Client extends EventEmitter
     {
         $deferred = new Deferred();
 
+        $data = $data ?: [];
+
         $messageId = $data['message_id'] ?? '';
         if (!$messageId) {
             $messageId = uniqid();
@@ -226,13 +330,16 @@ class Client extends EventEmitter
             $keys = ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
             foreach ($keys as $key) {
                 $defer = new Deferred();
-                // var_dump("$event:$messageId:$key");
-                $that->once("$event:$messageId:$key", function(ConnectionInterface $connection, $data) use ($defer) {
+
+                $that->once("$event:$messageId:$key", function(ConnectionInterface $connection, $data) use ($defer, $event) {
+                    var_dump($event, $data, "11111111");
+
                     $defer->resolve($data);
                 });
                 $promises[] = $defer->promise();
             }
             $that->getJsonPromise($promises)->then(function($data) use ($deferred) {
+                var_dump($data,3333333);
                 $deferred->resolve($data);
             });
          

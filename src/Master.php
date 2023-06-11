@@ -179,14 +179,14 @@ class Master extends Base
     // 客户端关闭 转给 worker
     protected function _client_close($connection)
     {
-        if (isset($connection->_worker)) {
-            $this->write($connection->_worker, [
-                'event' => 'client_close',
-                'data' => [
-                    'client_id' => $connection->_id
-                ]
-            ]);
-        }
+        // if (isset($connection->_worker)) {
+        //     $this->write($connection->_worker, [
+        //         'event' => 'client_close',
+        //         'data' => [
+        //             'client_id' => $connection->_id
+        //         ]
+        //     ]);
+        // }
 
         // unset($this->client_id_to_client[$connection->id]);
 

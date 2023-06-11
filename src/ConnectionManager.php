@@ -51,9 +51,14 @@ class ConnectionManager
     // 外部调用关闭连接
     public function closeConnection($connection)
     {
+        $id = 0;
+        $_id = $connection->_id ?? 0;
+        $groupIds = [];
         if ($this->connections->contains($connection)){
             $this->connections->detach($connection);
             unset($this->connection_id_to_connection[$connection->_id]);
+            // 当前_id 假如的分组ID
+            $groupIds = $this->connection_id_to_group_ids[$connection->_id] ?? [];
             $this->_leaveAllGroup($connection);
             
             // 清除ID和_id 的对应关系
@@ -66,6 +71,11 @@ class ConnectionManager
                 }
             }
         }
+        return [
+            'id' => $id,
+            '_id' => $_id,
+            'group_ids' => $groupIds,
+        ];
 
     }
 
@@ -93,7 +103,6 @@ class ConnectionManager
             return null;
         }
         $_ids = array_keys($this->connection_id_to_connection);
-        var_dump($_ids);
         return $this->connection_id_to_connection[$_ids[array_rand($_ids)]] ?? null;
     }
 
@@ -137,16 +146,18 @@ class ConnectionManager
 
         // 避免重复加入
         if ($this->groups[$groupId]->contains($connection)) {
-            return ;
+            return 1;
         }
 
         $this->groups[$groupId]->attach($connection);
         $this->connection_id_to_group_ids[$connection->_id][$groupId] = $groupId;
+        return 0;
     }
 
 
     protected function _sendMessageToGroup($groupId, $msg, $excludeIds = [], $exclude_Ids = [])
     {
+        $count = 0;
         if (isset($this->groups[$groupId])) {
             foreach ($this->groups[$groupId] as $connection) {
                 $id = $this->_getIdBy_Id($connection->_id);
@@ -154,8 +165,10 @@ class ConnectionManager
                     continue;
                 }
                 $this->send($connection, $msg);
+                $count++;
             }
         }
+        return $count;
     }
 
     protected function _sendMessageToGroupBy_Id($groupId, $_id, $msg)
@@ -187,10 +200,7 @@ class ConnectionManager
     protected function _sendMessageTo_Id($_id, $msg)
     {
         $connection = $this->getConnectionBy_Id($_id);
-        if ($connection) {
-            var_dump($msg,222);
-        }
-        $this->send($connection, $msg);
+        return $this->send($connection, $msg);
     }
 
     public function getConnectionBy_Id($_id)
@@ -212,7 +222,9 @@ class ConnectionManager
             else {
                 throw new \Exception("not exist method send or write", 1);
             }
+            return true;
         }
+        return false;
     }
 
 
@@ -291,7 +303,10 @@ class ConnectionManager
     public function joinGroupBy_Id($groupId, $_id)
     {
         $connection = $this->getConnectionBy_Id($_id);
-        $this->_joinGroup($groupId, $connection);
+        if (!$connection) {
+            return 2;
+        }
+        return $this->_joinGroup($groupId, $connection);
     }
 
     public function leaveGroupById($groupId, $id)
@@ -335,14 +350,19 @@ class ConnectionManager
         $this->_sendMessageTo_Id($_id, $msg);
     }
 
-    public function sendMessageToGroupExceptIds($groupId, $msg, $excludeIds = [])
+    public function sendToGroup($groupId, $msg, $excludeIds = [], $exclude_Ids = [])
     {
-        $this->_sendMessageToGroup($groupId, $msg, $excludeIds);
+        return $this->_sendMessageToGroup($groupId, $msg, $excludeIds, $exclude_Ids);
     }
 
-    public function sendMessageToGroupExcept_Ids($groupId, $msg, $exclude_Ids = [])
+    public function sendToGroupExceptIds($groupId, $msg, $excludeIds = [])
     {
-        $this->_sendMessageToGroup($groupId, $msg, [], $exclude_Ids);
+        return $this->_sendMessageToGroup($groupId, $msg, $excludeIds);
+    }
+
+    public function sendToGroupExcept_Ids($groupId, $msg, $exclude_Ids = [])
+    {
+        return $this->_sendMessageToGroup($groupId, $msg, [], $exclude_Ids);
     }
 
 
@@ -397,7 +417,7 @@ class ConnectionManager
     
     public function broadcastToAllGroupOnce($data)
     {
-        $keys = [];
+
         foreach (array_keys($this->groups) as $key => $groupId) {
             $data['data']['data']['message_key'] = $key;
             $this->broadcastToGroupOnce($groupId, $data);
@@ -488,6 +508,12 @@ class ConnectionManager
         return array_values(array_unique($groupIds));
     }
 
+    //加入房间
+    public function getGroupIds()
+    {
+        return array_keys($this->groups);
+    }
+
     // _id 加入房间
     public function getGroupIdsBy_Id($_id)
     {
@@ -504,6 +530,30 @@ class ConnectionManager
     public function getGroupCountBy_Id($_id)
     {
         return count($this->getGroupIdsBy_Id($_id));
+    }
+
+    // 分组下 绑定的ID数量
+    public function getGroupIdCount($groupId)
+    {
+        $connections = $this->groups[$groupId] ?? [];
+        $index = 0;
+        $ids = [];
+        foreach ($connections as $connections) {
+            if (isset($this->connection_id_to_id[$connections->_id])) {
+                $id = $this->connection_id_to_id[$connections->_id];
+                // 去重（一个id可能有多个_id）
+                if (!in_array($id, $ids)) {
+                    $ids[] = $this->connection_id_to_id[$connections->_id];
+                    $index++;
+                }
+            }
+        }
+        return $index;
+    }
+
+    public function getGroup_IdCount($groupId)
+    {
+        return count($this->groups[$groupId] ?? []);
     }
 
 }
