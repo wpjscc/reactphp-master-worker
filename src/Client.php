@@ -54,7 +54,7 @@ class Client extends EventEmitter
             'message' => $message,
         ];
 
-        return $this->commonMethod($event, $data);
+        return $this->commonClientMethod($event, $data);
 
         if (is_array($message)) {
             $that = $this; 
@@ -84,6 +84,7 @@ class Client extends EventEmitter
     public function getOnlineClientIds() 
     {
 
+        return $this->getOnline_Ids();
         return $this->getJsonPromise($this->getOnline_Ids())->then(function($data) {
             $ids = [];
             foreach ($data as $item) {
@@ -122,6 +123,15 @@ class Client extends EventEmitter
 
     protected function getOnline_Ids()
     {
+
+        return $this->commonMasterMethod(__FUNCTION__)->then(function($data) {
+            $ids = [];
+            foreach ($data as $item) {
+                $ids = array_merge($ids, $item);
+            }
+            return $ids;
+        });
+        
         $promises = [];
 
         $event = __FUNCTION__;
@@ -167,7 +177,7 @@ class Client extends EventEmitter
         return $deferred->promise();
     }
 
-    protected function commonMethod($event, $data)
+    protected function commonClientMethod($event, $data)
     {
         $data = [
             'cmd' => 'worker_message',
@@ -179,6 +189,46 @@ class Client extends EventEmitter
         return $this->getJsonPromise($data)->then(function($data)  {
             return ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
         });
+    }
+
+    protected function commonMasterMethod($event, $data = [])
+    {
+        $deferred = new Deferred();
+
+        $messageId = $data['message_id'] ?? '';
+        if (!$messageId) {
+            $messageId = uniqid();
+        }
+
+        $data['message_id'] = $messageId;
+
+        $data = [
+            'cmd' => 'worker_message',
+            'data' =>  [
+                "event" => $event,
+                "data" => $data
+            ],
+        ];
+
+        $that = $this;
+
+        $this->getJsonPromise($data)->then(function($data) use ($event, $messageId, $that, $deferred)  {
+            $promises = [];
+            $keys = ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
+            foreach ($keys as $key) {
+                $defer = new Deferred();
+                // var_dump("$event:$messageId:$key");
+                $that->once("$event:$messageId:$key", function(ConnectionInterface $connection, $data) use ($defer) {
+                    $defer->resolve($data);
+                });
+                $promises[] = $defer->promise();
+            }
+            $that->getJsonPromise($promises)->then(function($data) use ($deferred) {
+                $deferred->resolve($data);
+            });
+         
+        });
+        return $deferred->promise();
     }
 
 }
