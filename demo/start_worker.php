@@ -86,23 +86,24 @@ $chat->on('broadcast', function($_id, $data){
     if ($type == 'other') {
         $excludeClient_Ids[] = $_id;
     }
-    Client::instance()->broadcast(json_encode([
+    Client::instance()->broadcast([
         'event_type' => 'broadcast',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【worker广播消息】已接收到消息-'.$data['value'] ?? ''
+            'msg' => '【worker广播消息】已接收到消息-'.$data['value'] ?? '',
+            'data' => Client::instance()->getOnlineClientIds()
         ]
-    ]), $excludeClient_Ids);
+    ], $excludeClient_Ids);
 
     if ($type == 'other') {
         Client::instance()->sendToClient($_id, 
-            json_encode([
+            [
                 'event_type' => 'broadcast',
                 'data' => [
                     'client_id' => $_id,
                     'msg' => '【worker广播消息】广播成功'
                 ]
-            ])
+            ]
         );
     }
 });
