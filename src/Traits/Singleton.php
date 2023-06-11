@@ -1,29 +1,31 @@
 <?php 
 
-namespace Wpjscc\MasterWorker;
+namespace Wpjscc\MasterWorker\Traits;
 
 trait Singleton
 {
-    protected static $instance;
+    protected static $instance = [];
 
     /**
      * Create a new instance of this singleton.
      */
-    final public static function instance()
+    final public static function instance($key = null)
     {
-        return isset(static::$instance)
-            ? static::$instance
-            : static::$instance = new static;
+        $key = $key ?: static::class;
+        return isset(static::$instance[$key])
+            ? static::$instance[$key]
+            : static::$instance[$key] = new static;
     }
 
     /**
      * Forget this singleton's instance if it exists
      */
-    final public static function forgetInstance()
+    final public static function forgetInstance($key = null)
     {
-        static::$instance = null;
+        $key = $key ?: static::class;
+        unset(static::$instance[$key]);
     }
-
+    
     /**
      * Constructor.
      */

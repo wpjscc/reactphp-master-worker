@@ -7,11 +7,12 @@ use React\Socket\TcpConnector;
 
 class Worker extends Base
 {
-    protected $addressToMaster = [];
 
     protected $masterAddresses = [];
 
     protected $retrySecond = 3;
+
+    protected $workerStartCount = 5;
 
 
     protected function init()
@@ -44,48 +45,62 @@ class Worker extends Base
     protected function _broadcast_master_address(ConnectionInterface $connection, $data)
     {
         $this->info('broadcast_master_address');
-        var_dump($data);
         if (isset($data['master_address'])) {
-            $this->connectToMaster($data['master_address']);
+            $this->connectMaster($data['master_address']);
         }
     }
 
-    protected function connectToMaster($address)
+    protected function connectMaster($address)
     {
 
-        // 已经在了
-        if (in_array($address, $this->masterAddresses)) {
-            return;
+        // 已经在连接了
+        if (isset($this->masterAddresses[$address])) {
+            if ($this->masterAddresses[$address]>=$this->workerStartCount) {
+                return;
+            }
+        } else {
+            $this->masterAddresses[$address] = 0;
         }
 
-        $tcpConnector = new TcpConnector();
-        $tcpConnector->connect($address)->then(function (ConnectionInterface $connection) use ($address) {
+        $count = $this->workerStartCount-$this->masterAddresses[$address];
 
-            Worker::instance()->emit('master_open', [$connection]);
-            // 给服务端发送消息
-            Worker::instance()->write($connection, [
-                'event' => 'worker_coming',
-                // todo 这里可以发送验证信息
-                'data' => []
-            ]);
-        
-            $ndjson = new \Clue\React\NDJson\Decoder($connection, true);
-            $ndjson->on('data', function ($data) use ($connection) {
-                $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
-                if ($event) {
-                    Worker::instance()->emit($event, [$connection, $data['data'] ?? []]);
+        for ($i=0; $i < $count; $i++) { 
+            $this->masterAddresses[$address]++;
+            $tcpConnector = new TcpConnector();
+            $tcpConnector->connect($address)->then(function (ConnectionInterface $connection) use ($address) {
+
+                Worker::instance()->emit('master_open', [$connection]);
+                // 给服务端发送消息
+                Worker::instance()->write($connection, [
+                    'event' => 'worker_coming',
+                    // todo 这里可以发送验证信息
+                    'data' => []
+                ]);
+            
+                $ndjson = new \Clue\React\NDJson\Decoder($connection, true);
+                $ndjson->on('data', function ($data) use ($connection) {
+                    $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
+                    if ($event) {
+                        Worker::instance()->emit($event, [$connection, $data['data'] ?? []]);
+                    }
+                });
+            
+                $ndjson->on('close', function () use ($connection) {
+                    Worker::instance()->emit('master_close', [$connection]);
+                });
+                
+                // 非本地 和server保持心跳
+                if (strpos($address, '127.0.0.1') !== 0) {
+                    Worker::instance()->ping($connection);
+                }
+            }, function($e) use ($address) {
+                $this->info('connect master error: ' . $e->getMessage());
+                $this->masterAddresses[$address]--;
+                if ($this->masterAddresses[$address] <= 0) {
+                    unset($this->masterAddresses[$address]);
                 }
             });
-        
-            $ndjson->on('close', function () use ($connection) {
-                Worker::instance()->emit('master_close', [$connection]);
-            });
-            
-             // 非本地 和server保持心跳
-            if (strpos($address, '127.0.0.1') !== 0) {
-                Worker::instance()->ping($connection);
-            }
-        });
+        }
 
     }
 
@@ -99,13 +114,12 @@ class Worker extends Base
     {
         $this->info('master_open');
         // todo 
-        $this->emit('workerOpen', [$connection]);
     }
 
     protected function _master_reply(ConnectionInterface $connection, $data)
     {
         $this->info('master_reply');
-            $this->addMaster($connection, $data['address'] ?? '');
+        $this->addMaster($connection, $data);
     }
 
     protected function _master_close(ConnectionInterface $connection)
@@ -114,23 +128,30 @@ class Worker extends Base
         $this->removeMaster($connection);
     }
 
-    protected function addMaster($connection, $address)
+    protected function addMaster($connection, $data)
     {
+        $address = $data['master_address'] ?? '';
         if ($address) {
-            $this->addressToMaster[$address] = $connection;
+            // $this->addressToMaster->attach($connection, $address);
+            ConnectionManager::instance('master')->addConnection($connection, $data);
+            ConnectionManager::instance('master')->bindId($address, $connection->_id);
+            ConnectionManager::instance('master')->joinGroupById($address, $address);
         }
     }
 
     protected function removeMaster($connection)
     {
-        $address = array_search($connection, $this->addressToMaster);
-
-        if ($address !== false) {
-            unset(static::$addressToMaster[$address]);
-            if (($key = array_search($address, $this->masterAddresses)) !== false) {
-                unset($this->masterAddresses[$key]);
+        $data = ConnectionManager::instance('master')->getConnectionData($connection);
+        $address = $data['master_address'] ?? null;
+        if ($address) {
+            if (isset($this->masterAddresses[$address])) {
+                $this->masterAddresses[$address]--;
+                if ($this->masterAddresses[$address] <= 0) {
+                    unset($this->masterAddresses[$address]);
+                }
             }
         }
+        ConnectionManager::instance('master')->closeConnection($connection);
     }
 
 
@@ -149,8 +170,8 @@ class Worker extends Base
         $this->info('client_message');
         // todo client message
         $clientId = $data['client_id'] ?? '';
-        $data = $data['message'] ?? '';
-        $this->emit('clientMessage', [$clientId, $data]);
+        $message = $data['message'] ?? '';
+        $this->emit('clientMessage', [$clientId, $message]);
     }
 
     protected function _client_close(ConnectionInterface $connection, $data)
@@ -165,6 +186,8 @@ class Worker extends Base
 
     public function run()
     {
+        $this->emit('workerOpen', []);
+
         $this->connectRegister();
     }
 

@@ -35,10 +35,15 @@ class Master extends Base
         $this->on('client_close', [$this, '_client_close']);
 
         // worker message
-        $this->on('worker_message', [$this, '_worker_message']);
+        $this->on('worker_client_message', [$this, '_worker_client_message']);
+        $this->on('worker_client_close', [$this, '_worker_client_close']);
 
         $this->on('ping', [$this, '_ping']);
         $this->on('pong', [$this, '_pong']);
+
+
+        // 给客户端发送消息
+        $this->on('_sendToClient', [$this, '_sendToClient']);
 
     }
 
@@ -62,19 +67,29 @@ class Master extends Base
     protected function _worker_open(ConnectionInterface $connection)
     {
         $this->info('worker_open');
+
     }
 
     protected function _worker_coming(ConnectionInterface $connection, $data)
     {
         $this->info('worker_coming');
+        $this->replyWorker($connection);
         // todo  $data 验证信息
-        $this->addWorker($connection);
+        // $this->addWorker($connection);
+        ConnectionManager::instance('worker')->addConnection($connection, $data);
+
+        $this->info('worker_count:'. ConnectionManager::instance('worker')->getConnectionsCount());
+
     }
 
     protected function _worker_close(ConnectionInterface $connection)
     {
-        $this->removeWorker($connection);
+        // $this->removeWorker($connection);
+        ConnectionManager::instance('worker')->closeConnection($connection);
         $this->info('worker_close');
+        $this->info('worker_count:'. ConnectionManager::instance('worker')->getConnectionsCount());
+
+
     }
     
 
@@ -144,6 +159,8 @@ class Master extends Base
         }
 
         $this->client_id_to_client[$connection->id] = $connection;
+
+        ConnectionManager::instance('client')->addConnection($connection, $msg);
     }
     // 客户端消息 转给 worker
     protected function _client_message(ConnectionInterface $connection, $msg)
@@ -153,7 +170,7 @@ class Master extends Base
             $this->write($_worker, [
                 'event' => 'client_message',
                 'data' => [
-                    'client_id' => $connection->id,
+                    'client_id' => $connection->_id,
                     // client msg
                     'message' => $msg
                 ]
@@ -161,6 +178,7 @@ class Master extends Base
             return true;
         }
         return false;
+        // todo worker 发送消息 
     }
     // 客户端关闭 转给 worker
     protected function _client_close(ConnectionInterface $connection)
@@ -169,12 +187,15 @@ class Master extends Base
             $this->write($connection->_worker, [
                 'event' => 'client_close',
                 'data' => [
-                    'client_id' => $connection->id
+                    'client_id' => $connection->_id
                 ]
             ]);
         }
 
-        unset($this->client_id_to_client[$connection->id]);
+        // unset($this->client_id_to_client[$connection->id]);
+
+        ConnectionManager::instance('client')->closeConnection($connection);
+
     }
     
     // 收到worker 的客户端信息
@@ -185,6 +206,7 @@ class Master extends Base
         if ($client) {
             $client->write($data['message'] ?? '');
         }
+        // todo todo一个公共的处理消息的方法
     }
     // worker 主动关闭 客户端
     protected function _worker_client_close(ConnectionInterface $connection, $data)
@@ -195,6 +217,9 @@ class Master extends Base
             $client->end($data['message'] ?? '');
             unset($this->client_id_to_client[$client_id]);
         }
+        // todo 关闭
+        ConnectionManager::instance('client')->closeConnection($connection);
+
     }
 
     public function run()
@@ -281,6 +306,19 @@ class Master extends Base
     {
         return $this->retrySecond;
     }
+
+
+    // 给客户端发送消息相关
+
+    // 接收到worker的消息了
+    protected function _sendToClient(ConnectionInterface $connection, $data)
+    {
+       $client_id = $data['client_id'];
+       $message = $data['message'] ?? '';
+
+       ConnectionManager::instance('client')->sendMessageTo_Id($client_id, $message);
+    }
+
 
 
 }

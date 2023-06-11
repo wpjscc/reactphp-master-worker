@@ -8,12 +8,10 @@ use Evenement\EventEmitter;
 
 class Base extends EventEmitter
 {
-    use Singleton;
+    use Traits\Singleton;
+    use Traits\Write;
 
-    public function write(ConnectionInterface $connection, $data)
-    {
-        (new Encoder($connection))->write($data);
-    }
+    public $pingRate = 5;
 
     public function ping(ConnectionInterface $connection)
     {
@@ -24,7 +22,7 @@ class Base extends EventEmitter
             }
         });
         $that = $this;
-        $timer = \React\EventLoop\Loop::get()->addPeriodicTimer(5, function() use ($connection, $that) {
+        $timer = \React\EventLoop\Loop::get()->addPeriodicTimer($this->pingRate, function() use ($connection, $that) {
             $that->write($connection, [
                 'cmd' => 'ping',
                 'data' => [
