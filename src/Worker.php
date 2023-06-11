@@ -25,6 +25,7 @@ class Worker extends Base
         // master
         $this->on('master_open', [$this, '_master_open']);
         $this->on('master_reply', [$this, '_master_reply']);
+        $this->on('master_message', [$this, '_master_message']);
         $this->on('master_close', [$this, '_master_close']);
 
         // client
@@ -120,6 +121,27 @@ class Worker extends Base
     {
         $this->info('master_reply');
         $this->addMaster($connection, $data);
+    }
+
+    protected function _master_message(ConnectionInterface $connection, $data)
+    {
+        $this->info('master_message');
+        var_dump($data);
+
+        $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
+
+        if ($event) {
+            $messageId = $data['data']['message_id'] ?? '';
+            $messageKey = $data['data']['message_key'] ?? '';
+            if ($messageId) {
+                $event .= ':' . $messageId;
+            }
+            if (strlen($messageKey)>0) {
+                $event .= ':' . $messageKey;
+            }
+            Client::instance()->emit($event, [$connection, $data['data']['data'] ?? []]);
+        }
+
     }
 
     protected function _master_close(ConnectionInterface $connection)

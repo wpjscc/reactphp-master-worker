@@ -27,6 +27,7 @@ class Master extends Base
         // worker
         $this->on('worker_open', [$this, '_worker_open']);
         $this->on('worker_coming', [$this, '_worker_coming']);
+        $this->on('worker_message', [$this, '_worker_message']);
         $this->on('worker_close', [$this, '_worker_close']);
 
         // client
@@ -41,9 +42,6 @@ class Master extends Base
         $this->on('ping', [$this, '_ping']);
         $this->on('pong', [$this, '_pong']);
 
-
-        // 给客户端发送消息(收到worker消息后转发给客户端)
-        $this->on('_sendToClient', [$this, '_sendToClient']);
 
     }
 
@@ -70,6 +68,7 @@ class Master extends Base
 
     }
 
+
     protected function _worker_coming(ConnectionInterface $connection, $data)
     {
         $this->info('worker_coming');
@@ -79,6 +78,17 @@ class Master extends Base
         ConnectionManager::instance('worker')->addConnection($connection, $data);
 
         $this->info('worker_count:'. ConnectionManager::instance('worker')->getConnectionCount());
+
+    }
+
+    protected function _worker_message(ConnectionInterface $connection, $data)
+    {
+        $this->info('worker_message');
+        var_dump($data);
+        $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
+        if ($event) {
+            Client::instance()->emit('worker_'.$event, [$connection, $data['data'] ?? []]);
+        }
 
     }
 
@@ -116,30 +126,6 @@ class Master extends Base
         if ($index !== false) {
             unset($this->workers[$index]);
         }
-    }
-
-    public function getWorkerCount()
-    {
-        return count($this->workers);
-    }
-
-    public function getWorker(ConnectionInterface $connection)
-    {
-       if (isset($connection->_worker)) {
-           return $connection->_worker;
-       }
-
-       if ($this->getWorkerCount() == 0) {
-           return null;
-       }
-
-       $connection->_worker = $this->workers[array_rand($this->workers)];
-       $connection->_worker->on('close', function() use ($connection) {
-           unset($connection->_worker);
-       });
-
-       return $connection->_worker;
-
     }
 
 
@@ -316,18 +302,6 @@ class Master extends Base
     {
         return $this->retrySecond;
     }
-
-
-    // 给客户端发送消息相关
-
-    // 接收到worker的消息了
-    protected function _sendToClient(ConnectionInterface $connection, $data)
-    {
-        $client_id = $data['client_id'];
-        $message = $data['message'] ?? '';
-        ConnectionManager::instance('client')->sendMessageTo_Id($client_id, $message);
-    }
-
 
 
 }

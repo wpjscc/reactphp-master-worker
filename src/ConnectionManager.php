@@ -394,11 +394,16 @@ class ConnectionManager
     }
 
     // 广播所有组信息一次
+    
     public function broadcastToAllGroupOnce($data)
     {
-        foreach (array_keys($this->groups) as $groupId) {
+        $keys = [];
+        foreach (array_keys($this->groups) as $key => $groupId) {
+            $data['data']['data']['message_key'] = $key;
             $this->broadcastToGroupOnce($groupId, $data);
+            $keys[] = $key;
         }
+        return $keys;
     }
 
     public function broadcastToGroupOnce($groupId, $data)

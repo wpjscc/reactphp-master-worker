@@ -3,9 +3,9 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Wpjscc\MasterWorker\Worker;
-use Wpjscc\MasterWorker\WorkerClient;
+use Wpjscc\MasterWorker\Client;
 
-require './chat.php';
+require __DIR__.'/chat.php';
 
 $worker = Worker::instance();
 
@@ -19,14 +19,13 @@ $worker->on('clientOpen', function ($_id, $data) {
 
 $worker->on('clientMessage', function ($_id, $message) {
     echo 'clientMessage' . PHP_EOL;
-    var_dump($_id, $message);
-    WorkerClient::instance()->sendToClient($_id, json_encode([
-        'event_type' => 'echo',
-        'data' => [
-            'client_id' => $_id,
-            'msg' => '【系统消息】已接收到消息-'.$message ?? ''
-        ]
-    ]));
+    // Client::instance()->sendToClient($_id, json_encode([
+    //     'event_type' => 'echo',
+    //     'data' => [
+    //         'client_id' => $_id,
+    //         'msg' => '【系统消息】已接收到消息-'.$message ?? ''
+    //     ]
+    // ]));
     try {
         $data = json_decode($message, true);
         if (isset($data['event_type']) && !in_array($data['event_type'], ['open', 'message', 'close'])) {
@@ -34,6 +33,7 @@ $worker->on('clientMessage', function ($_id, $message) {
         }
     } catch (\Throwable $th) {
         //throw $th;
+        Worker::instance()->info($th);
     }
 
 });
@@ -49,17 +49,17 @@ $chat = Chat::instance();
 
 
 $chat->on('echo', function($_id, $data){
-    $conn->send(json_encode([
+    Client::instance()->sendToClient($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【系统消息】已接收到消息-'.$data['value'] ?? ''
+            'msg' => '【系统消息】已接收到消息-worker-'.$data['value'] ?? ''
         ]
     ]));
 });
 
 $chat->on('getClientId', function($_id, $data){
-    $conn->send(json_encode([
+    Client::instance()->sendToClient($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
@@ -68,34 +68,34 @@ $chat->on('getClientId', function($_id, $data){
     ]));
 });
 $chat->on('getOnlineClientIds', function($_id, $data){
-    $conn->send(json_encode([
+    Client::instance()->sendToClient($_id, [
         'event_type' => 'onOnlineClientIds',
         'data' => [
             'client_id' => $_id,
             'msg' => '【系统消息】',
-            'data' => ImClient::getClientIds()
+            'data' => Client::instance()->getOnlineClientIds()
         ]
-    ]));
+    ]);
 });
 
 $chat->on('broadcast', function($_id, $data){
     
     $type = $data['type'] ?? 'all';
-    $excludeClientIds = [];
+    $excludeClient_Ids = [];
 
     if ($type == 'other') {
-        $excludeClientIds[] = $_id;
+        $excludeClient_Ids[] = $_id;
     }
-    ImClient::broadcast(json_encode([
+    Client::instance()->broadcast(json_encode([
         'event_type' => 'broadcast',
         'data' => [
             'client_id' => $_id,
             'msg' => '【广播消息】已接收到消息-'.$data['value'] ?? ''
         ]
-    ]), $excludeClientIds);
+    ]), $excludeClient_Ids);
 
     if ($type == 'other') {
-       ImClient::sendMessageByClientId($_id, 
+        Client::instance()->sendMessageByClientId($_id, 
             json_encode([
                 'event_type' => 'broadcast',
                 'data' => [
