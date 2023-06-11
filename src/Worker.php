@@ -171,6 +171,7 @@ class Worker extends Base
         // todo client message
         $clientId = $data['client_id'] ?? '';
         $message = $data['message'] ?? '';
+        var_dump($data);
         $this->emit('clientMessage', [$clientId, $message]);
     }
 

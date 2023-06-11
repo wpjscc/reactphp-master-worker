@@ -30,7 +30,7 @@ class ConnectionManager
         $this->connections = new \SplObjectStorage;
     }
 
-    public function addConnection(ConnectionInterface $connection, $data = null)
+    public function addConnection($connection, $data = null)
     {
         if (!isset($connection->_id)){
             $connection->_id = bin2hex(openssl_random_pseudo_bytes(16));
@@ -49,7 +49,7 @@ class ConnectionManager
     }
 
     // 外部调用关闭连接
-    public function closeConnection(ConnectionInterface $connection)
+    public function closeConnection($connection)
     {
         if ($this->connections->contains($connection)){
             $this->connections->detach($connection);
@@ -74,7 +74,7 @@ class ConnectionManager
         return $this->connections;
     }
 
-    public function getConnectionsCount()
+    public function getConnectionCount()
     {
         return $this->connections->count();
     }
@@ -89,12 +89,17 @@ class ConnectionManager
 
     public function getRandConnection()
     {
-        return $this->connection_id_to_connection[array_rand(array_keys($this->connection_id_to_connection))] ?? null;
+        if (empty($this->connection_id_to_connection)) {
+            return null;
+        }
+        $_ids = array_keys($this->connection_id_to_connection);
+        var_dump($_ids);
+        return $this->connection_id_to_connection[$_ids[array_rand($_ids)]] ?? null;
     }
 
 
 
-    protected function _leaveAllGroup(ConnectionInterface $connection)
+    protected function _leaveAllGroup($connection)
     {
         if ($connection && isset($this->connection_id_to_group_ids[$connection->_id])) {
             foreach ($this->connection_id_to_group_ids[$connection->_id] as $groupId) {
@@ -182,6 +187,9 @@ class ConnectionManager
     protected function _sendMessageTo_Id($_id, $msg)
     {
         $connection = $this->getConnectionBy_Id($_id);
+        if ($connection) {
+            var_dump($msg,222);
+        }
         $this->send($connection, $msg);
     }
 
@@ -386,27 +394,32 @@ class ConnectionManager
     }
 
     // 广播所有组信息一次
-    public function broadcastToAllGroupOnce($msg, $msgId = '')
+    public function broadcastToAllGroupOnce($data)
     {
         foreach (array_keys($this->groups) as $groupId) {
-            $this->broadcastToGroupOnce($groupId, $msg, $msgId);
+            $this->broadcastToGroupOnce($groupId, $data);
         }
     }
 
-    public function broadcastToGroupOnce($groupId, $msg, $msgId = '')
+    public function broadcastToGroupOnce($groupId, $data)
     {
         $group = $this->groups[$groupId] ?? [];
         $index = array_rand(array_fill(0, count($group), 0));
         foreach ($group as $key => $connection) {
             if ($index === $key) {
                 // 仅仅发送一次
-                $this->send($connection, [
-                    'msg_id' => $msgId,
-                    'msg' => $msg,
-                ]);
+                $this->send($connection, $data);
                 break;
             }
 
+        }
+    }
+
+    public function randSendToConnection($data)
+    {
+        $connection = $this->getRandConnection();
+        if ($connection) {
+            $this->send($connection, $data);
         }
     }
 
