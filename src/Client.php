@@ -18,6 +18,7 @@ class Client extends EventEmitter
         // 收到 worker 的消息 (在 master 中处理)
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
         $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
+        $this->on('worker_broadcast', [$this, '_master_broadcast']);
     }
 
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
@@ -41,6 +42,15 @@ class Client extends EventEmitter
                 'data' => $data
             ],
         ]);
+    }
+
+    protected function _master_broadcast(ConnectionInterface $connection, $data)
+    {
+        $message = $data['message'] ?? '';
+        if (is_array($message)) {
+            $message = json_encode($message);
+        }
+        ConnectionManager::instance('client')->broadcast($message, $data['exclude__ids'] ?? []);
     }
 
     // 以下在 worker 或 register 中调用
@@ -83,20 +93,19 @@ class Client extends EventEmitter
 
     public function getOnlineClientIds() 
     {
-
         return $this->getOnline_Ids();
-        return $this->getJsonPromise($this->getOnline_Ids())->then(function($data) {
-            $ids = [];
-            foreach ($data as $item) {
-                $ids = array_merge($ids, $item);
-            }
-            return $ids;
-        });
-
     }
 
-    public function broadcast($message)
+    public function broadcast($message, $exclude_Ids = [])
     {
+        $event = __FUNCTION__;
+        $data = [
+            'client_id' => '',
+            'message_id' => uniqid(),
+            'exclude__ids' => $exclude_Ids,
+            'message' => $message,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data);
         // $data = [
         //     'cmd' => 'broadcast',
         //     'data' =>  [
@@ -131,7 +140,7 @@ class Client extends EventEmitter
             }
             return $ids;
         });
-        
+
         $promises = [];
 
         $event = __FUNCTION__;
@@ -191,7 +200,7 @@ class Client extends EventEmitter
         });
     }
 
-    protected function commonMasterMethod($event, $data = [])
+    protected function commonMasterMethod($event, $data = null)
     {
         $deferred = new Deferred();
 

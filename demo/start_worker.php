@@ -23,7 +23,7 @@ $worker->on('clientMessage', function ($_id, $message) {
     //     'event_type' => 'echo',
     //     'data' => [
     //         'client_id' => $_id,
-    //         'msg' => '【系统消息】已接收到消息-'.$message ?? ''
+    //         'msg' => '【worker系统消息】已接收到消息-'.$message ?? ''
     //     ]
     // ]));
     try {
@@ -53,7 +53,7 @@ $chat->on('echo', function($_id, $data){
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【系统消息】已接收到消息-worker-'.$data['value'] ?? ''
+            'msg' => '【worker系统消息】已接收到消息-worker-'.$data['value'] ?? ''
         ]
     ]));
 });
@@ -63,7 +63,7 @@ $chat->on('getClientId', function($_id, $data){
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【系统消息】您的Client ID 为'."【{$_id}】"
+            'msg' => '【worker系统消息】您的Client ID 为'."【{$_id}】"
         ]
     ]));
 });
@@ -72,7 +72,7 @@ $chat->on('getOnlineClientIds', function($_id, $data){
         'event_type' => 'onOnlineClientIds',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【系统消息】',
+            'msg' => '【worker系统消息】',
             'data' => Client::instance()->getOnlineClientIds()
         ]
     ]);
@@ -90,17 +90,17 @@ $chat->on('broadcast', function($_id, $data){
         'event_type' => 'broadcast',
         'data' => [
             'client_id' => $_id,
-            'msg' => '【广播消息】已接收到消息-'.$data['value'] ?? ''
+            'msg' => '【worker广播消息】已接收到消息-'.$data['value'] ?? ''
         ]
     ]), $excludeClient_Ids);
 
     if ($type == 'other') {
-        Client::instance()->sendMessageByClientId($_id, 
+        Client::instance()->sendToClient($_id, 
             json_encode([
                 'event_type' => 'broadcast',
                 'data' => [
                     'client_id' => $_id,
-                    'msg' => '【广播消息】广播成功'
+                    'msg' => '【worker广播消息】广播成功'
                 ]
             ])
         );
@@ -125,14 +125,14 @@ $chat->on('beforeClose', function($_id){
             'id' => 0,
             'from' => [
                 'id' => 0,
-                'name' => '系统消息',
+                'name' => 'worker系统消息',
                 'avatar' => [
                     'url' => 'https://picsum.photos/300'
                 ],
             ],
             'to' => [
                 'id' => 0,
-                'name' => '系统消息',
+                'name' => 'worker系统消息',
                 'avatar' => [
                     'url' => 'https://picsum.photos/300'
                 ],
@@ -184,7 +184,7 @@ $chat->on('sendMessageByClientId', function(WebSocketConnection $from, $data){
         'event_type' => 'sendMessageByClientId',
         'data' => [
             'client_id' => $from->client_id,
-            'msg' => '【系统消息】'.'【'.$from->client_id.'】'.'信息发送成功'
+            'msg' => '【worker系统消息】'.'【'.$from->client_id.'】'.'信息发送成功'
         ]
     ]));
     ImClient::sendMessageByClientId($client_id, json_encode([
