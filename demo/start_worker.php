@@ -50,7 +50,7 @@ $chat = Chat::instance();
 
 $chat->on('echo', function($_id, $data){
 
-    Client::instance()->bindId($_id, json_encode([
+    Client::instance()->sendToClient($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
@@ -142,6 +142,17 @@ $chat->on('sendMessageById', function($_id, $data){
             ]
         ]));
     }
+
+    Client::instance()->sendToClient('', json_encode([
+        'event_type' => 'echo',
+        'data' => [
+            'client_id' => $_id,
+            'msg' => '【worker系统消息】hello world'
+        ]
+    ]), $id);
+
+
+
 
 });
 

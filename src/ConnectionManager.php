@@ -373,19 +373,18 @@ class ConnectionManager
         $this->_sendMessageTo_Id($_id, $msg);
     }
 
+    public function sendToClient($_id = '', $msg, $id = 0, $exclude_Ids = [])
+    {
+        if ($id) {
+            $this->sendMessageToId($id, $msg, $exclude_Ids);
+        } else {
+            $this->sendMessageTo_Id($_id, $msg);
+        }
+    }
+
     public function sendToGroup($groupId, $msg, $excludeIds = [], $exclude_Ids = [])
     {
-        return $this->_sendMessageToGroup($groupId, $msg, $excludeIds, $exclude_Ids);
-    }
-
-    public function sendToGroupExceptIds($groupId, $msg, $excludeIds = [])
-    {
-        return $this->_sendMessageToGroup($groupId, $msg, $excludeIds);
-    }
-
-    public function sendToGroupExcept_Ids($groupId, $msg, $exclude_Ids = [])
-    {
-        return $this->_sendMessageToGroup($groupId, $msg, [], $exclude_Ids);
+        $this->_sendMessageToGroup($groupId, $msg, $excludeIds, $exclude_Ids);
     }
 
 

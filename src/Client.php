@@ -35,12 +35,16 @@ class Client extends EventEmitter
 
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
     {
-        $client_id = $data['client_id'] ?? '';
         $message = $data['message'] ?? '';
         if (is_array($message)) {
             $message = json_encode($message);
         }
-        ConnectionManager::instance('client')->sendMessageTo_Id($client_id, $message);
+        ConnectionManager::instance('client')->sendToClient(
+            $data['_id'], 
+            $message,
+            $data['id'], 
+            $data['exclude__ids']
+        );
     }
 
 
@@ -178,11 +182,13 @@ class Client extends EventEmitter
 
     // 以下在 worker 或 register 中调用
 
-    public function sendToClient($_id, $message)
+    public function sendToClient($_id, $message, $id = 0, $exclude_Ids = [])
     {
         $event = __FUNCTION__;
         $data = [
-            'client_id' => $_id,
+            '_id' => $_id,
+            'id' => $id,
+            'exclude__ids' => $exclude_Ids,
             'message_id' => uniqid(),
             'message' => $message,
         ];
