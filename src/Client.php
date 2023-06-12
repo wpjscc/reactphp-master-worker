@@ -17,10 +17,12 @@ class Client extends EventEmitter
     {
         // 收到 worker 的消息 (在 master 中处理)
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
+        $this->on('worker_sendToGroup', [$this, '_master_sendToGroup']);
         $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
         $this->on('worker_broadcast', [$this, '_master_broadcast']);
         $this->on('worker_isOnline_Id', [$this, '_master_isOnline_Id']);
         $this->on('worker_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
+        $this->on('worker_leaveGroupBy_Id', [$this, '_master_leaveGroupBy_Id']);
         $this->on('worker_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
         $this->on('worker_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
     }
@@ -97,11 +99,21 @@ class Client extends EventEmitter
             ],
         ]);
     }
+    protected function _master_leaveGroupBy_Id(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->leaveGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
 
     protected function _master_getGroup_IdCount(ConnectionInterface $connection, $data)
     {
         $data['data'] = ConnectionManager::instance('client')->getGroup_IdCount($data['group_id'] ?? '');
-        var_dump($data, 999999);
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -236,15 +248,38 @@ class Client extends EventEmitter
         });
     }
 
+    public function leaveGroupBy_Id($group_id, $_id)
+    {
+        $data = [
+            '_id' => $_id,
+            'group_id' => $group_id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            // 离开成功
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            // 没在群中
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            // 没有该链接
+            elseif (in_array(2, $data)) {
+                return 2;
+            }
+            // 不可能出现这个
+            return 3;
+        });
+    }
+
     public function getGroup_IdCount($group_id)
     {
         $data = [
             'group_id' => $group_id,
         ];
-        var_dump($data, 888888);
 
         return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
-            var_dump($data, 7777);
+
             return array_sum($data);
         });
     }

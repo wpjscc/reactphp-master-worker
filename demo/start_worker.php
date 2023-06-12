@@ -174,7 +174,7 @@ $chat->on('sendMessageByClientId', function($_id, $data){
                 'event_type' => 'sendMessageByClientId',
                 'data' => [
                     'client_id' => $_id,
-                    'msg' => '【from】【'.$_id.'】'.$msg
+                    'msg' => '【worker from】【'.$_id.'】'.$msg
                 ]
             ]));
         } else {
@@ -219,7 +219,7 @@ $chat->on('joinGroupByClientId', function($_id, $data){
             'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
             'join_group_ids' => Client::instance()->getGroupIdsBy_Id($client_id),
         ])->then(function($data) use ($client_id, $group_id, $msg) {
-             $group__id_count = $data['group__id_count'];
+            $group__id_count = $data['group__id_count'];
             $join_group_ids = $data['join_group_ids'];
 
             // 加入房间后发送一条消息（不需要绑定）
@@ -227,7 +227,7 @@ $chat->on('joinGroupByClientId', function($_id, $data){
                 'event_type' => 'joinGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
-                    'msg' => "【 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg
                 ]
             ]));
 
@@ -236,7 +236,7 @@ $chat->on('joinGroupByClientId', function($_id, $data){
                 'event_type' => 'joinGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
-                    'msg' => "【 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】加入的所有房间ID为'.implode(',', $join_group_ids)
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】加入的所有房间ID为'.implode(',', $join_group_ids)
                 ]
             ]));
         });
@@ -245,58 +245,66 @@ $chat->on('joinGroupByClientId', function($_id, $data){
     });
 });
 
-$chat->on('leaveGroupByClientId', function(WebSocketConnection $from, $data){
+$chat->on('leaveGroupByClientId', function($_id, $data){
     $group_id = $data['group_id'] ?? '';
     $client_id = $data['client_id'] ?? '';
     if (!$group_id){
-        ImClient::sendMessageByClientId($client_id, json_encode([
+        Client::instance()->sendToClient($client_id, json_encode([
             'event_type' => 'leaveGroupByClientId',
             'data' => [
                 'client_id' => $client_id,
-                'msg' => '房间号不能是空'
+                'msg' => 'worker 房间号不能是空'
             ]
         ]));
         return;
     }
-    $state = ImClient::leaveGroupByClientId($group_id, $client_id);
+    Client::instance()->getJsonPromise([
+        'state' => Client::instance()->leaveGroupBy_Id($group_id, $client_id),
+    ])->then(function($data) use ($group_id, $client_id) {
+        $state = $data['state'];
 
-    $msg = "离开房间-$group_id 成功";
-    if (!$state) {
-        $msg = "离开房间-$group_id 失败";
-    } elseif ($state === 1) {
-        $msg = "已经离开房间-$group_id";
-    } 
-    $groupCount = ImClient::getGroupClientCount($group_id);
+        $msg = "离开房间-$group_id 成功";
+        if ($state==2) {
+            $msg = "离开房间-$group_id 失败";
+        } elseif ($state === 1) {
+            $msg = "已经离开房间-$group_id";
+        }
+        Client::instance()->getJsonPromise([
+            'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
+            'join_group_ids' => Client::instance()->getGroupIdsBy_Id($client_id),
+        ])->then(function($data) use ($client_id, $group_id, $msg) {
+            $group__id_count = $data['group__id_count'];
+            $join_group_ids = $data['join_group_ids'];
+            // 离开房间后发送一条消息（不需要绑定）
+            Client::instance()->sendToGroup($group_id, json_encode([
+                'event_type' => 'leaveGroupByClientId',
+                'data' => [
+                    'client_id' => $client_id,
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg
+                ]
+            ]));
+            Client::instance()->sendToClient($client_id, json_encode([
+                'event_type' => 'leaveGroupByClientId',
+                'data' => [
+                    'client_id' => $client_id,
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg.'您加入的所有房间ID为'.implode(',', $join_group_ids)
+                ]
+            ]));
+        });
 
-    // 离开房间后发送一条消息（不需要绑定）
-    ImClient::sendMessageToGroupByClientId($group_id, json_encode([
-        'event_type' => 'leaveGroupByClientId',
-        'data' => [
-            'client_id' => $client_id,
-            'msg' => "【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'.$msg
-        ]
-    ]));
-
-    // 你已经加入的房间为
-    $groupIds = ImClient::getGroupIdsByClientId($client_id);
-    ImClient::sendMessageByClientId($client_id, json_encode([
-        'event_type' => 'leaveGroupByClientId',
-        'data' => [
-            'client_id' => $client_id,
-            'msg' => "【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'.$msg.'您加入的所有房间ID为'.implode(',', $groupIds)
-        ]
-    ]));
+    });
+    
 });
 
-$chat->on('sendMessageToGroupByClientId', function(WebSocketConnection $from, $data){
+$chat->on('sendMessageToGroupByClientId', function($_id, $data){
     $group_id = $data['group_id'] ?? '';
     $client_id = $data['client_id'] ?? '';
     $msg = $data['value'] ?? '';
     if (!$group_id){
-        $from->send(json_encode([
+        Client::instance()->sendToClient($_id, json_encode([
             'event_type' => 'sendMessageToGroupByClientId',
             'data' => [
-                'client_id' => $client_id,
+                'client_id' => $_id,
                 'msg' => '房间号 不能为空'
             ]
         ]));

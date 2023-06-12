@@ -119,23 +119,31 @@ class ConnectionManager
 
     protected function _leaveGroup($groupId, $connection)
     {
-        if ($connection && isset($this->groups[$groupId])) {
-            if (isset($this->connection_id_to_group_ids[$connection->_id][$groupId])) {
-
-                $this->groups[$groupId]->detach($connection);
-                unset($this->connection_id_to_group_ids[$connection->_id][$groupId]);
-
-                // 避免无效的占用空数据
-                if ($this->groups[$groupId]->count() == 0) {
-                    unset($this->groups[$groupId]);
+        if ($connection) {
+            if (isset($this->groups[$groupId])) {
+                if (isset($this->connection_id_to_group_ids[$connection->_id][$groupId])) {
+    
+                    $this->groups[$groupId]->detach($connection);
+                    unset($this->connection_id_to_group_ids[$connection->_id][$groupId]);
+    
+                    // 避免无效的占用空数据
+                    if ($this->groups[$groupId]->count() == 0) {
+                        unset($this->groups[$groupId]);
+                    }
+    
+                    // 避免无效的占用空数据
+                    if (count($this->connection_id_to_group_ids[$connection->_id]) == 0) {
+                        unset($this->connection_id_to_group_ids[$connection->_id]);
+                    }
+                    return 0;
                 }
-
-                // 避免无效的占用空数据
-                if (count($this->connection_id_to_group_ids[$connection->_id]) == 0) {
-                    unset($this->connection_id_to_group_ids[$connection->_id]);
-                }
+            } else {
+                return 1;
             }
+        } else {
+            return 2;
         }
+        
     }
 
     protected function _joinGroup($groupId, $connection)
@@ -320,7 +328,10 @@ class ConnectionManager
     public function leaveGroupBy_Id($groupId, $_id)
     {
         $connection = $this->getConnectionBy_Id($_id);
-        $this->_leaveGroup($groupId, $connection);
+        if (!$connection) {
+            return 2;
+        }
+        return $this->_leaveGroup($groupId, $connection);
     }
 
     public function leaveAllGroupById($id)
