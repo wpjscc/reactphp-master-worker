@@ -242,19 +242,26 @@ class ConnectionManager
     public function bindId($id, $_id)
     {
         $connection = $this->getConnectionBy_Id($_id);
-        $this->_bindIdAndConnection($id, $connection);
+        return $this->_bindIdAndConnection($id, $connection);
     }
 
     protected function _bindIdAndConnection($id, $connection)
     {
         if ($connection) {
             // 避免被重复绑定（一个ID可以对应多个_id, 但一个_id 只能对应一个ID）
-
             if (!isset($this->connection_id_to_id[$connection->_id])) {
                 $this->id_to_connection_ids[$id][$connection->_id] = $connection->_id;
                 $this->connection_id_to_id[$connection->_id] = $id;
+                return 0;
             }
+            $bindedId = $this->connection_id_to_id[$connection->_id];
+
+            if ($bindedId!=$id) {
+                // 被其他ID绑定过
+            }
+            return 1;
         }
+        return 2;
        
     }
 
@@ -264,6 +271,11 @@ class ConnectionManager
         foreach ($_ids as $_id) {
             $this->_unBindIdAnd_Id($id, $_id);
         }
+
+        if (empty($_ids)){
+            return 1;
+        }
+        return 0;
     }
 
     public function unBind_Id($_id)

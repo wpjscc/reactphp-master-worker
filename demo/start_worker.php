@@ -49,13 +49,100 @@ $chat = Chat::instance();
 
 
 $chat->on('echo', function($_id, $data){
-    Client::instance()->sendToClient($_id, json_encode([
+
+    Client::instance()->bindId($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
             'msg' => '【worker系统消息】已接收到消息-worker-'.$data['value'] ?? ''
         ]
     ]));
+});
+$chat->on('bindId', function($_id, $data){
+    $id = $data['value'] ?? '';
+    $client_id = $data['client_id'] ?? '';
+
+    if (is_array($id)){
+        return false;
+    }
+
+    if (!$id || !$client_id) {
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】id 不能为空'
+            ]
+        ]));
+        return;
+    }
+    Client::instance()->bindId($id, $client_id)->then(function($res) use ($client_id) {
+        $msg = '绑定成功';
+        if ($res == 1) {
+            $msg = '已绑定过';
+        }
+        elseif ($res==2) {
+            $msg = '绑定失败';
+        }
+        elseif ($res==3) {
+            $msg = '系统错误';
+        }
+        Client::instance()->sendToClient($client_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $client_id,
+                'msg' => '【worker系统消息】'. $msg
+            ]
+        ]));
+    });
+});
+$chat->on('unBindId', function($_id, $data){
+    $id = $data['value'] ?? '';
+
+    if (is_array($id)){
+        return false;
+    }
+
+    if (!$id) {
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】id 不能为空'
+            ]
+        ]));
+        return ;
+    }
+    Client::instance()->unBindId($id)->then(function($res) use ($_id)  {
+        $msg = '解绑成功';
+        if ($res == 1) {
+            $msg = '没绑定过该ID';
+        }
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】'. $msg
+            ]
+        ]));
+    });
+});
+
+$chat->on('sendMessageById', function($_id, $data){
+    $id = $data['value'] ?? '';
+    if (is_array($id)){
+        return false;
+    }
+    if (!$id) {
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】id 不能为空'
+            ]
+        ]));
+    }
+
 });
 
 $chat->on('getClientId', function($_id, $data){

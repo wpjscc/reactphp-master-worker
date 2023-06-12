@@ -19,6 +19,8 @@ class Client extends EventEmitter
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
         $this->on('worker_sendToGroup', [$this, '_master_sendToGroup']);
         $this->on('worker_broadcast', [$this, '_master_broadcast']);
+        $this->on('worker_bindId', [$this, '_master_bindId']);
+        $this->on('worker_unBindId', [$this, '_master_unBindId']);
         $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
         $this->on('worker_isOnline_Id', [$this, '_master_isOnline_Id']);
         $this->on('worker_isInGroupBy_Id', [$this, '_master_isInGroupBy_Id']);
@@ -68,6 +70,29 @@ class Client extends EventEmitter
     }
 
     
+
+    protected function _master_bindId(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->bindId($data['id'] ?? '', $data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+    protected function _master_unBindId(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->unBindId($data['id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
 
     protected function _master_getOnline_Ids(ConnectionInterface $connection, $data)
     {
@@ -177,6 +202,43 @@ class Client extends EventEmitter
         return $this->commonClientMethod(__FUNCTION__, $data);
     }
     
+
+    public function bindId($id, $_id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, [
+            'id' => $id,
+            '_id' => $_id
+        ])->then(function($data) {
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            elseif (in_array(2, $data)) {
+                return 2;
+            }
+            // 不可能出现
+            return 3;
+        });
+
+    }
+    public function unBindId($id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, [
+            'id' => $id,
+        ])->then(function($data) {
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            // 不可能出现
+            return 2;
+        });
+
+    }
 
     public function getOnline_Ids()
     {
