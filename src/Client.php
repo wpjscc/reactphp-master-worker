@@ -18,14 +18,18 @@ class Client extends EventEmitter
         // 收到 worker 的消息 (在 master 中处理)
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
         $this->on('worker_sendToGroup', [$this, '_master_sendToGroup']);
-        $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
         $this->on('worker_broadcast', [$this, '_master_broadcast']);
+        $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
         $this->on('worker_isOnline_Id', [$this, '_master_isOnline_Id']);
+        $this->on('worker_isInGroupBy_Id', [$this, '_master_isInGroupBy_Id']);
         $this->on('worker_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
         $this->on('worker_leaveGroupBy_Id', [$this, '_master_leaveGroupBy_Id']);
         $this->on('worker_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
         $this->on('worker_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
     }
+
+
+    // 在master 中处理
 
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
     {
@@ -54,8 +58,17 @@ class Client extends EventEmitter
 
     }
 
+    protected function _master_broadcast(ConnectionInterface $connection, $data)
+    {
+        $message = $data['message'] ?? '';
+        if (is_array($message)) {
+            $message = json_encode($message);
+        }
+        ConnectionManager::instance('client')->broadcast($message, $data['exclude__ids'] ?? []);
+    }
 
-    // 在master 中处理
+    
+
     protected function _master_getOnline_Ids(ConnectionInterface $connection, $data)
     {
         $data['data'] = ConnectionManager::instance('client')->get_Ids();
@@ -68,18 +81,20 @@ class Client extends EventEmitter
         ]);
     }
 
-    protected function _master_broadcast(ConnectionInterface $connection, $data)
-    {
-        $message = $data['message'] ?? '';
-        if (is_array($message)) {
-            $message = json_encode($message);
-        }
-        ConnectionManager::instance('client')->broadcast($message, $data['exclude__ids'] ?? []);
-    }
-
     protected function _master_isOnline_Id(ConnectionInterface $connection, $data)
     {
         $data['data'] = ConnectionManager::instance('client')->isOnline_Id($data['_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+    protected function _master_isInGroupBy_Id(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->isInGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -149,28 +164,17 @@ class Client extends EventEmitter
 
         return $this->commonClientMethod($event, $data);
 
-        if (is_array($message)) {
-            $that = $this; 
-            $this->getJsonPromise($message)->then(function($data) use ($_id, $that) {
-                $that->sendToClient($_id, json_encode($data));
-            });
-            return ;
-        }
+    }
 
-        $event = __FUNCTION__;
-        $messageId = uniqid();
+    public function sendToGroup($group_id, $message, $excludeIds = [], $exclude_Ids = [])
+    {
         $data = [
-            'cmd' => 'worker_message',
-            'data' =>  [
-                "event" => $event,
-                "data" => [
-                    'client_id' => $_id,
-                    'message_id' => $messageId,
-                    'message' => $message,
-                ]
-            ],
+            'group_id' => $group_id,
+            'exclude_ids' => $excludeIds,
+            'exclude__ids' => $exclude_Ids,
+            'message' => $message,
         ];
-        ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
+        return $this->commonClientMethod(__FUNCTION__, $data);
     }
     
 
@@ -185,7 +189,6 @@ class Client extends EventEmitter
 
     public function broadcast($message, $exclude_Ids = [])
     {
-        $event = __FUNCTION__;
         $data = [
             'client_id' => '',
             'message_id' => uniqid(),
@@ -193,33 +196,21 @@ class Client extends EventEmitter
             'message' => $message,
         ];
         return $this->commonMasterMethod(__FUNCTION__, $data);
-        // $data = [
-        //     'cmd' => 'broadcast',
-        //     'data' =>  [
-        //         'client_id' => $_id,
-        //         'message_id' => $msgId,
-        //         'message' => $message,
-        //     ],
-        // ];
-        $event = __METHOD__;
-        $messageId = uniqid();
-        $data = [
-            'cmd' => 'worker_message',
-            'data' =>  [
-                "event" => $event,
-                "data" => [
-                    'client_id' => '',
-                    'message_id' => $messageId,
-                    'message' => $message,
-                ]
-            ],
-        ];
-        ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
     }
 
     public function isOnline_Id($_id)
     {
         return $this->commonMasterMethod(__FUNCTION__, ['_id' => $_id])->then(function($data){
+            return empty(array_filter($data)) ? false : true;
+        });
+    }
+
+    public function isInGroupBy_Id($group_id, $_id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, [
+            'group_id' => $group_id,
+            '_id' => $_id,
+        ])->then(function($data){
             return empty(array_filter($data)) ? false : true;
         });
     }
@@ -292,17 +283,6 @@ class Client extends EventEmitter
         return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
             return array_reduce($data, 'array_merge', []);
         });
-    }
-
-    public function sendToGroup($group_id, $message, $excludeIds = [], $exclude_Ids = [])
-    {
-        $data = [
-            'group_id' => $group_id,
-            'exclude_ids' => $excludeIds,
-            'exclude__ids' => $exclude_Ids,
-            'message' => $message,
-        ];
-        return $this->commonClientMethod(__FUNCTION__, $data);
     }
 
     public function getJsonPromise($array = [])

@@ -300,77 +300,90 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
     $group_id = $data['group_id'] ?? '';
     $client_id = $data['client_id'] ?? '';
     $msg = $data['value'] ?? '';
+    $type = $data['type'] ?? 'all';
+
     if (!$group_id){
         Client::instance()->sendToClient($_id, json_encode([
             'event_type' => 'sendMessageToGroupByClientId',
             'data' => [
                 'client_id' => $_id,
-                'msg' => '房间号 不能为空'
-            ]
-        ]));
-        return;
-    }
-    $groupCount = ImClient::getGroupClientCount($group_id);
-
-    if (!ImClient::isInGroupByClientId($group_id, $client_id)) {
-        ImClient::sendMessageByClientId($client_id, json_encode([
-            'event_type' => 'sendMessageToGroupByClientId',
-            'data' => [
-                'client_id' => $client_id,
-                'msg' => "【 房间-$group_id -人数-$groupCount 】".'你不在 '.$group_id.' 中'
+                'msg' => 'worker 房间号 不能为空'
             ]
         ]));
         return;
     }
 
-    $type = $data['type'] ?? 'all';
-    $excludeClientIds = [];
-    if ($type === 'other') {
-        $excludeClientIds = [
-            $client_id
-        ];
-    }
-    $groupCount = ImClient::getGroupClientCount($group_id);
+    Client::instance()->getJsonPromise([
+        'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
+        'is_in_group_by__id' => Client::instance()->isInGroupBy_Id($group_id, $client_id)
+    ])->then(function($data) use ($client_id, $group_id, $msg, $type) {
+        $group__id_count = $data['group__id_count'];
+        $is_in_group_by__id = $data['is_in_group_by__id'];
 
+        if (!$is_in_group_by__id) {
+            Client::instance()->sendToClient($client_id, json_encode([
+                'event_type' => 'sendMessageToGroupByClientId',
+                'data' => [
+                    'client_id' => $client_id,
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'你不在 '.$group_id.' 中'
+                ]
+            ]));
+            return ;
+        }
 
-    $state = ImClient::sendMessageToGroupByClientId($group_id, json_encode([
-        'event_type' => 'sendMessageToGroupByClientId',
-        'data' => [
-            'client_id' => $client_id,
-            'msg' => "【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'.$msg
-        ]
-    ]), $excludeClientIds);
+        $exclude_Ids = [];
+        if ($type === 'other') {
+            $exclude_Ids = [
+                $client_id
+            ];
+        }
 
-    if ($type === 'other') {
-        ImClient::sendMessageByClientId($client_id, json_encode([
+        Client::instance()->sendToGroup($group_id, json_encode([
             'event_type' => 'sendMessageToGroupByClientId',
             'data' => [
                 'client_id' => $client_id,
-                'msg' => "【 房间-$group_id -人数-$groupCount 】给其他人发送成功"
+                'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg
             ]
-        ]));
-    }
+        ]), [], $exclude_Ids);
 
-    $msg = "send $group_id success";
-    if (!$state) {
-        $msg = "发送 $group_id 失败";
-        ImClient::sendMessageByClientId($client_id, json_encode([
-            'event_type' => 'sendMessageToGroupByClientId',
-            'data' => [
-                'client_id' => $client_id,
-                'msg' => "【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'.$msg
-            ]
-        ]));
-    } elseif ($state === 1) {
-        $msg = "没有人在 $group_id";
-        ImClient::sendMessageByClientId($client_id, json_encode([
-            'event_type' => 'sendMessageToGroupByClientId',
-            'data' => [
-                'client_id' => $client_id,
-                'msg' =>"【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'. $msg
-            ]
-        ]));
-    }
+
+        if ($type === 'other') {
+            Client::instance()->sendToClient($client_id, json_encode([
+                'event_type' => 'sendMessageToGroupByClientId',
+                'data' => [
+                    'client_id' => $client_id,
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】给其他人发送成功"
+                ]
+            ]));
+        }
+
+
+        // $msg = "send $group_id success";
+        // if (!$state) {
+        //     $msg = "发送 $group_id 失败";
+        //     ImClient::sendMessageByClientId($client_id, json_encode([
+        //         'event_type' => 'sendMessageToGroupByClientId',
+        //         'data' => [
+        //             'client_id' => $client_id,
+        //             'msg' => "【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'.$msg
+        //         ]
+        //     ]));
+        // } elseif ($state === 1) {
+        //     $msg = "没有人在 $group_id";
+        //     ImClient::sendMessageByClientId($client_id, json_encode([
+        //         'event_type' => 'sendMessageToGroupByClientId',
+        //         'data' => [
+        //             'client_id' => $client_id,
+        //             'msg' =>"【 房间-$group_id -人数-$groupCount 】".'【'.$client_id.'】'. $msg
+        //         ]
+        //     ]));
+        // }
+
+
+    });
+
+
+
 
    
 });
