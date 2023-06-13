@@ -48,6 +48,16 @@ $worker->run();
 $chat = Chat::instance();
 
 
+$chat->on('get_IdData', function($_id, $data){
+    Client::instance()->sendToClient($_id, [
+        'event_type' => 'echo',
+        'data' => [
+            'client_id' => $_id,
+            'data' => Client::instance()->get_IdData($_id),
+            'msg' => '【worker系统消息】已接收到消息-worker-'
+        ]
+    ]);
+});
 $chat->on('echo', function($_id, $data){
 
     Client::instance()->sendToClient($_id, json_encode([

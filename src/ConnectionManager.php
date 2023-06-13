@@ -236,6 +236,11 @@ class ConnectionManager
     }
 
 
+    public function get_IdData($_id)
+    {
+        $connection = $this->connection_id_to_connection[$_id] ?? null;
+        return $this->getConnectionData($connection);
+    }
 
 
     // 以下是对用户ID和connectionId的绑定关系的操作

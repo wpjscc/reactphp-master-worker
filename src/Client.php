@@ -19,6 +19,7 @@ class Client extends EventEmitter
         $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
         $this->on('worker_sendToGroup', [$this, '_master_sendToGroup']);
         $this->on('worker_broadcast', [$this, '_master_broadcast']);
+        $this->on('worker_get_IdData', [$this, '_master_get_IdData']);
         $this->on('worker_bindId', [$this, '_master_bindId']);
         $this->on('worker_unBindId', [$this, '_master_unBindId']);
         $this->on('worker_unBind_Id', [$this, '_master_unBind_Id']);
@@ -75,6 +76,18 @@ class Client extends EventEmitter
     }
 
     
+
+    protected function _master_get_IdData(ConnectionInterface $connection, $data)
+    {
+        $data['data'] = ConnectionManager::instance('client')->get_IdData($data['_id'] ?? '') ?: [];
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
 
     protected function _master_bindId(ConnectionInterface $connection, $data)
     {
@@ -220,6 +233,16 @@ class Client extends EventEmitter
         return $this->commonClientMethod(__FUNCTION__, $data);
     }
     
+
+    public function get_IdData($_id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, [
+            '_id' => $_id
+        ])->then(function($data) {
+            return array_reduce($data, 'array_merge', []);
+        });
+
+    }
 
     public function bindId($id, $_id)
     {
