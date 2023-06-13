@@ -281,7 +281,7 @@ class ConnectionManager
     public function unBind_Id($_id)
     {
         $id = $this->_getIdBy_Id($_id);
-        $this->_unBindIdAnd_Id($id, $_id);
+        return $this->_unBindIdAnd_Id($id, $_id);
     }
 
     protected function _get_IdsById($id)
@@ -303,7 +303,9 @@ class ConnectionManager
             if ($this->_getIdTo_IdsCount($id) == 0) {
                 unset($this->id_to_connection_ids[$id]);
             }
+            return 0;
         }
+        return 1;
     }
 
     protected function _getIdTo_IdsCount($id)

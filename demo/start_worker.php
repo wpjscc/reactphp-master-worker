@@ -127,6 +127,32 @@ $chat->on('unBindId', function($_id, $data){
         ]));
     });
 });
+$chat->on('unBind_Id', function($_id, $data){
+
+    if (!$_id) {
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】_id 不能为空'
+            ]
+        ]));
+        return ;
+    }
+    Client::instance()->unBind_Id($_id)->then(function($res) use ($_id)  {
+        $msg = '解绑_id成功';
+        if ($res == 1) {
+            $msg = '没绑定过该_id';
+        }
+        Client::instance()->sendToClient($_id, json_encode([
+            'event_type' => 'echo',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】'. $msg
+            ]
+        ]));
+    });
+});
 
 $chat->on('sendMessageById', function($_id, $data){
     $id = $data['value'] ?? '';
