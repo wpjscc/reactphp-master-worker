@@ -15,7 +15,7 @@ class Client extends EventEmitter
 
     protected function init()
     {
-        // 收到 worker 或 master 的消息 (在 master 中处理)
+        // 收到 worker 或 register 的消息 (在 master 中处理)
         $this->on($this->key.'_sendToClient', [$this, '_master_sendToClient']);
         $this->on($this->key.'_sendToGroup', [$this, '_master_sendToGroup']);
         $this->on($this->key.'_broadcast', [$this, '_master_broadcast']);
@@ -38,10 +38,11 @@ class Client extends EventEmitter
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
     {
         $message = $data['message'] ?? '';
+        $clientKey = $data['client_key'] ?? 'client';
         if (is_array($message)) {
             $message = json_encode($message);
         }
-        ConnectionManager::instance('client')->sendToClient(
+        ConnectionManager::instance($clientKey)->sendToClient(
             $data['_id'], 
             $message,
             $data['id'], 
@@ -53,11 +54,13 @@ class Client extends EventEmitter
     protected function _master_sendToGroup(ConnectionInterface $connection, $data)
     {
         $message = $data['message'] ?? '';
+        $clientKey = $data['client_key'] ?? 'client';
+
         if (is_array($message)) {
             $message = json_encode($message);
         }
 
-        ConnectionManager::instance('client')->sendToGroup(
+        ConnectionManager::instance($clientKey)->sendToGroup(
             $data['group_id'] ?? '',
             $message,
             $data['exclude_ids'] ?? [],
@@ -69,17 +72,19 @@ class Client extends EventEmitter
     protected function _master_broadcast(ConnectionInterface $connection, $data)
     {
         $message = $data['message'] ?? '';
+        $clientKey = $data['client_key'] ?? 'client';
         if (is_array($message)) {
             $message = json_encode($message);
         }
-        ConnectionManager::instance('client')->broadcast($message, $data['exclude__ids'] ?? []);
+        ConnectionManager::instance($clientKey)->broadcast($message, $data['exclude__ids'] ?? []);
     }
 
     
 
     protected function _master_get_IdData(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->get_IdData($data['_id'] ?? '') ?: [];
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->get_IdData($data['_id'] ?? '') ?: [];
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -91,7 +96,8 @@ class Client extends EventEmitter
 
     protected function _master_bindId(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->bindId($data['id'] ?? '', $data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->bindId($data['id'] ?? '', $data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -102,7 +108,8 @@ class Client extends EventEmitter
     }
     protected function _master_unBindId(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->unBindId($data['id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->unBindId($data['id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -113,7 +120,8 @@ class Client extends EventEmitter
     }
     protected function _master_unBind_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->unBind_Id($data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->unBind_Id($data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -125,7 +133,8 @@ class Client extends EventEmitter
 
     protected function _master_getOnline_Ids(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->get_Ids();
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->get_Ids();
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -137,7 +146,8 @@ class Client extends EventEmitter
 
     protected function _master_isOnline_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->isOnline_Id($data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->isOnline_Id($data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -148,7 +158,8 @@ class Client extends EventEmitter
     }
     protected function _master_isInGroupBy_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->isInGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->isInGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -159,7 +170,8 @@ class Client extends EventEmitter
     }
     protected function _master_joinGroupBy_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->joinGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->joinGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -170,7 +182,8 @@ class Client extends EventEmitter
     }
     protected function _master_leaveGroupBy_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->leaveGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->leaveGroupBy_Id($data['group_id'] ?? '', $data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -182,7 +195,8 @@ class Client extends EventEmitter
 
     protected function _master_getGroup_IdCount(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->getGroup_IdCount($data['group_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->getGroup_IdCount($data['group_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -194,7 +208,8 @@ class Client extends EventEmitter
 
     protected function _master_getGroupIdsBy_Id(ConnectionInterface $connection, $data)
     {
-        $data['data'] = ConnectionManager::instance('client')->getGroupIdsBy_Id($data['_id'] ?? '');
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->getGroupIdsBy_Id($data['_id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
