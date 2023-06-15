@@ -15,21 +15,21 @@ class Client extends EventEmitter
 
     protected function init()
     {
-        // 收到 worker 的消息 (在 master 中处理)
-        $this->on('worker_sendToClient', [$this, '_master_sendToClient']);
-        $this->on('worker_sendToGroup', [$this, '_master_sendToGroup']);
-        $this->on('worker_broadcast', [$this, '_master_broadcast']);
-        $this->on('worker_get_IdData', [$this, '_master_get_IdData']);
-        $this->on('worker_bindId', [$this, '_master_bindId']);
-        $this->on('worker_unBindId', [$this, '_master_unBindId']);
-        $this->on('worker_unBind_Id', [$this, '_master_unBind_Id']);
-        $this->on('worker_getOnline_Ids', [$this, '_master_getOnline_Ids']);
-        $this->on('worker_isOnline_Id', [$this, '_master_isOnline_Id']);
-        $this->on('worker_isInGroupBy_Id', [$this, '_master_isInGroupBy_Id']);
-        $this->on('worker_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
-        $this->on('worker_leaveGroupBy_Id', [$this, '_master_leaveGroupBy_Id']);
-        $this->on('worker_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
-        $this->on('worker_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
+        // 收到 worker 或 master 的消息 (在 master 中处理)
+        $this->on($this->key.'_sendToClient', [$this, '_master_sendToClient']);
+        $this->on($this->key.'_sendToGroup', [$this, '_master_sendToGroup']);
+        $this->on($this->key.'_broadcast', [$this, '_master_broadcast']);
+        $this->on($this->key.'_get_IdData', [$this, '_master_get_IdData']);
+        $this->on($this->key.'_bindId', [$this, '_master_bindId']);
+        $this->on($this->key.'_unBindId', [$this, '_master_unBindId']);
+        $this->on($this->key.'_unBind_Id', [$this, '_master_unBind_Id']);
+        $this->on($this->key.'_getOnline_Ids', [$this, '_master_getOnline_Ids']);
+        $this->on($this->key.'_isOnline_Id', [$this, '_master_isOnline_Id']);
+        $this->on($this->key.'_isInGroupBy_Id', [$this, '_master_isInGroupBy_Id']);
+        $this->on($this->key.'_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
+        $this->on($this->key.'_leaveGroupBy_Id', [$this, '_master_leaveGroupBy_Id']);
+        $this->on($this->key.'_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
+        $this->on($this->key.'_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
     }
 
 
@@ -426,14 +426,15 @@ class Client extends EventEmitter
     protected function commonClientMethod($event, $data)
     {
         $data = [
-            'cmd' => 'worker_message',
+            'cmd' => $this->key.'_message',
             'data' =>  [
                 "event" => $event,
                 "data" => $data
             ],
         ];
-        return $this->getJsonPromise($data)->then(function($data)  {
-            return ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
+        $that = $this;
+        return $this->getJsonPromise($data)->then(function($data) use ($that)  {
+            return ConnectionManager::instance($that->key.'_master')->broadcastToAllGroupOnce($data);
         });
     }
 
@@ -451,7 +452,7 @@ class Client extends EventEmitter
         $data['message_id'] = $messageId;
 
         $data = [
-            'cmd' => 'worker_message',
+            'cmd' => $this->key.'_message',
             'data' =>  [
                 "event" => $event,
                 "data" => $data
@@ -459,10 +460,11 @@ class Client extends EventEmitter
         ];
 
         $that = $this;
+        var_dump($this->key,'111111');
 
         $this->getJsonPromise($data)->then(function($data) use ($event, $messageId, $that, $deferred)  {
             $promises = [];
-            $keys = ConnectionManager::instance('master')->broadcastToAllGroupOnce($data);
+            $keys = ConnectionManager::instance($that->key.'_master')->broadcastToAllGroupOnce($data);
             foreach ($keys as $key) {
                 $defer = new Deferred();
 

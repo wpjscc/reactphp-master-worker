@@ -6,6 +6,8 @@ trait Singleton
 {
     protected static $instance = [];
 
+    protected $key;
+
     /**
      * Create a new instance of this singleton.
      */
@@ -14,7 +16,7 @@ trait Singleton
         $key = $key ?: static::class;
         return isset(static::$instance[$key])
             ? static::$instance[$key]
-            : static::$instance[$key] = new static;
+            : static::$instance[$key] = new static($key);
     }
 
     /**
@@ -29,8 +31,9 @@ trait Singleton
     /**
      * Constructor.
      */
-    final protected function __construct()
+    final protected function __construct($key)
     {
+        $this->key = $key;
         $this->init();
     }
 

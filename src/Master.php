@@ -22,6 +22,7 @@ class Master extends Base
         // 注册中心
         $this->on('register_open', [$this, '_register_open']);
         $this->on('register_reply', [$this, '_register_reply']);
+        // todo registe message
         $this->on('register_close', [$this, '_register_close']);
 
         // worker
@@ -87,7 +88,7 @@ class Master extends Base
         var_dump($data);
         $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
         if ($event) {
-            Client::instance()->emit('worker_'.$event, [$connection, $data['data'] ?? []]);
+            Client::instance('worker')->emit('worker_'.$event, [$connection, $data['data'] ?? []]);
         }
 
     }

@@ -139,7 +139,7 @@ class Worker extends Base
             if (strlen($messageKey)>0) {
                 $event .= ':' . $messageKey;
             }
-            Client::instance()->emit($event, [$connection, $data['data']['data'] ?? []]);
+            Client::instance('worker')->emit($event, [$connection, $data['data']['data'] ?? []]);
         }
 
     }
@@ -155,15 +155,15 @@ class Worker extends Base
         $address = $data['master_address'] ?? '';
         if ($address) {
             // $this->addressToMaster->attach($connection, $address);
-            ConnectionManager::instance('master')->addConnection($connection, $data);
-            ConnectionManager::instance('master')->bindId($address, $connection->_id);
-            ConnectionManager::instance('master')->joinGroupById($address, $address);
+            ConnectionManager::instance('worker_master')->addConnection($connection, $data);
+            ConnectionManager::instance('worker_master')->bindId($address, $connection->_id);
+            ConnectionManager::instance('worker_master')->joinGroupById($address, $address);
         }
     }
 
     protected function removeMaster($connection)
     {
-        $data = ConnectionManager::instance('master')->getConnectionData($connection);
+        $data = ConnectionManager::instance('worker_master')->getConnectionData($connection);
         $address = $data['master_address'] ?? null;
         if ($address) {
             if (isset($this->masterAddresses[$address])) {
@@ -173,7 +173,7 @@ class Worker extends Base
                 }
             }
         }
-        ConnectionManager::instance('master')->closeConnection($connection);
+        ConnectionManager::instance('worker_master')->closeConnection($connection);
     }
 
 

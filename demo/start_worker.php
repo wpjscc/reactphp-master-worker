@@ -19,7 +19,7 @@ $worker->on('clientOpen', function ($_id, $data) {
 
 $worker->on('clientMessage', function ($_id, $message) {
     echo 'clientMessage' . PHP_EOL;
-    // Client::instance()->sendToClient($_id, json_encode([
+    // Client::instance('worker')->sendToClient($_id, json_encode([
     //     'event_type' => 'echo',
     //     'data' => [
     //         'client_id' => $_id,
@@ -49,18 +49,18 @@ $chat = Chat::instance();
 
 
 $chat->on('get_IdData', function($_id, $data){
-    Client::instance()->sendToClient($_id, [
+    Client::instance('worker')->sendToClient($_id, [
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
-            'data' => Client::instance()->get_IdData($_id),
-            'msg' => '【worker系统消息】已接收到消息-worker-'
+            'data' => Client::instance('worker')->get_IdData($_id),
+            'msg' => '【worker系统消息】已接收到消息-worker'
         ]
     ]);
 });
 $chat->on('echo', function($_id, $data){
 
-    Client::instance()->sendToClient($_id, json_encode([
+    Client::instance('worker')->sendToClient($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
@@ -77,7 +77,7 @@ $chat->on('bindId', function($_id, $data){
     }
 
     if (!$id || !$client_id) {
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -86,7 +86,7 @@ $chat->on('bindId', function($_id, $data){
         ]));
         return;
     }
-    Client::instance()->bindId($id, $client_id)->then(function($res) use ($client_id) {
+    Client::instance('worker')->bindId($id, $client_id)->then(function($res) use ($client_id) {
         $msg = '绑定成功';
         if ($res == 1) {
             $msg = '已绑定过';
@@ -97,7 +97,7 @@ $chat->on('bindId', function($_id, $data){
         elseif ($res==3) {
             $msg = '系统错误';
         }
-        Client::instance()->sendToClient($client_id, json_encode([
+        Client::instance('worker')->sendToClient($client_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $client_id,
@@ -114,7 +114,7 @@ $chat->on('unBindId', function($_id, $data){
     }
 
     if (!$id) {
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -123,12 +123,12 @@ $chat->on('unBindId', function($_id, $data){
         ]));
         return ;
     }
-    Client::instance()->unBindId($id)->then(function($res) use ($_id)  {
+    Client::instance('worker')->unBindId($id)->then(function($res) use ($_id)  {
         $msg = '解绑成功';
         if ($res == 1) {
             $msg = '没绑定过该ID';
         }
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -140,7 +140,7 @@ $chat->on('unBindId', function($_id, $data){
 $chat->on('unBind_Id', function($_id, $data){
 
     if (!$_id) {
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -149,12 +149,12 @@ $chat->on('unBind_Id', function($_id, $data){
         ]));
         return ;
     }
-    Client::instance()->unBind_Id($_id)->then(function($res) use ($_id)  {
+    Client::instance('worker')->unBind_Id($_id)->then(function($res) use ($_id)  {
         $msg = '解绑_id成功';
         if ($res == 1) {
             $msg = '没绑定过该_id';
         }
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -170,7 +170,7 @@ $chat->on('sendMessageById', function($_id, $data){
         return false;
     }
     if (!$id) {
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'echo',
             'data' => [
                 'client_id' => $_id,
@@ -179,7 +179,7 @@ $chat->on('sendMessageById', function($_id, $data){
         ]));
     }
 
-    Client::instance()->sendToClient('', json_encode([
+    Client::instance('worker')->sendToClient('', json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
@@ -193,7 +193,7 @@ $chat->on('sendMessageById', function($_id, $data){
 });
 
 $chat->on('getClientId', function($_id, $data){
-    Client::instance()->sendToClient($_id, json_encode([
+    Client::instance('worker')->sendToClient($_id, json_encode([
         'event_type' => 'echo',
         'data' => [
             'client_id' => $_id,
@@ -202,12 +202,12 @@ $chat->on('getClientId', function($_id, $data){
     ]));
 });
 $chat->on('getOnlineClientIds', function($_id, $data){
-    Client::instance()->sendToClient($_id, [
+    Client::instance('worker')->sendToClient($_id, [
         'event_type' => 'onOnlineClientIds',
         'data' => [
             'client_id' => $_id,
             'msg' => '【worker系统消息】',
-            'data' => Client::instance()->getOnline_Ids()
+            'data' => Client::instance('worker')->getOnline_Ids()
         ]
     ]);
 });
@@ -220,17 +220,17 @@ $chat->on('broadcast', function($_id, $data){
     if ($type == 'other') {
         $excludeClient_Ids[] = $_id;
     }
-    Client::instance()->broadcast([
+    Client::instance('worker')->broadcast([
         'event_type' => 'broadcast',
         'data' => [
             'client_id' => $_id,
             'msg' => '【worker广播消息】已接收到消息-'.$data['value'] ?? '',
-            'data' => Client::instance()->getOnline_Ids()
+            'data' => Client::instance('worker')->getOnline_Ids()
         ]
     ], $excludeClient_Ids);
 
     if ($type == 'other') {
-        Client::instance()->sendToClient($_id, 
+        Client::instance('worker')->sendToClient($_id, 
             [
                 'event_type' => 'broadcast',
                 'data' => [
@@ -275,7 +275,7 @@ $chat->on('sendMessageByClientId', function($_id, $data){
     $client_id = $data['client_id'] ?? '';
     $msg = $data['value'] ?? '';
     if (!$client_id){
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'sendMessageByClientId',
             'data' => [
                 'client_id' => $_id,
@@ -285,10 +285,10 @@ $chat->on('sendMessageByClientId', function($_id, $data){
         return;
     }
 
-    Client::instance()->isOnline_Id($client_id)->then(function($res) use ($_id, $msg, $client_id) {
+    Client::instance('worker')->isOnline_Id($client_id)->then(function($res) use ($_id, $msg, $client_id) {
         if ($res) {
             if (!$msg){
-                Client::instance()->sendToClient($_id, json_encode([
+                Client::instance('worker')->sendToClient($_id, json_encode([
                     'event_type' => 'sendMessageByClientId',
                     'data' => [
                         'client_id' => $_id,
@@ -297,14 +297,14 @@ $chat->on('sendMessageByClientId', function($_id, $data){
                 ]));
                 return;
             }
-            Client::instance()->sendToClient($_id, json_encode([
+            Client::instance('worker')->sendToClient($_id, json_encode([
                 'event_type' => 'sendMessageByClientId',
                 'data' => [
                     'client_id' => $_id,
                     'msg' => '【worker系统消息】'.'【'.$_id.'】'.'信息发送成功'
                 ]
             ]));
-            Client::instance()->sendToClient($client_id, json_encode([
+            Client::instance('worker')->sendToClient($client_id, json_encode([
                 'event_type' => 'sendMessageByClientId',
                 'data' => [
                     'client_id' => $_id,
@@ -312,7 +312,7 @@ $chat->on('sendMessageByClientId', function($_id, $data){
                 ]
             ]));
         } else {
-            Client::instance()->sendToClient($_id, json_encode([
+            Client::instance('worker')->sendToClient($_id, json_encode([
                 'event_type' => 'sendMessageByClientId',
                 'data' => [
                     'client_id' => $client_id,
@@ -328,7 +328,7 @@ $chat->on('joinGroupByClientId', function($_id, $data){
     $group_id = $data['group_id'] ?? '';
     $client_id = $data['client_id'] ?? '';
     if (!$group_id){
-        Client::instance()->sendToClient($client_id, json_encode([
+        Client::instance('worker')->sendToClient($client_id, json_encode([
             'event_type' => 'joinGroupByClientId',
             'data' => [
                 'client_id' => $client_id,
@@ -338,8 +338,8 @@ $chat->on('joinGroupByClientId', function($_id, $data){
         return;
     }
 
-    Client::instance()->getJsonPromise([
-        'state' => Client::instance()->joinGroupBy_Id($group_id, $client_id),
+    Client::instance('worker')->getJsonPromise([
+        'state' => Client::instance('worker')->joinGroupBy_Id($group_id, $client_id),
     ])->then(function($data) use ($group_id, $client_id) {
         $state = $data['state'];
         $msg = "加入房间-$group_id 成功";
@@ -349,15 +349,15 @@ $chat->on('joinGroupByClientId', function($_id, $data){
             $msg = "已经加入房间-$group_id";
         }
 
-        Client::instance()->getJsonPromise([
-            'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
-            'join_group_ids' => Client::instance()->getGroupIdsBy_Id($client_id),
+        Client::instance('worker')->getJsonPromise([
+            'group__id_count' => Client::instance('worker')->getGroup_IdCount($group_id),
+            'join_group_ids' => Client::instance('worker')->getGroupIdsBy_Id($client_id),
         ])->then(function($data) use ($client_id, $group_id, $msg) {
             $group__id_count = $data['group__id_count'];
             $join_group_ids = $data['join_group_ids'];
 
             // 加入房间后发送一条消息（不需要绑定）
-            Client::instance()->sendToGroup($group_id, json_encode([
+            Client::instance('worker')->sendToGroup($group_id, json_encode([
                 'event_type' => 'joinGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
@@ -366,7 +366,7 @@ $chat->on('joinGroupByClientId', function($_id, $data){
             ]));
 
             // 你已经加入的房间为
-            Client::instance()->sendToClient($client_id, json_encode([
+            Client::instance('worker')->sendToClient($client_id, json_encode([
                 'event_type' => 'joinGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
@@ -383,7 +383,7 @@ $chat->on('leaveGroupByClientId', function($_id, $data){
     $group_id = $data['group_id'] ?? '';
     $client_id = $data['client_id'] ?? '';
     if (!$group_id){
-        Client::instance()->sendToClient($client_id, json_encode([
+        Client::instance('worker')->sendToClient($client_id, json_encode([
             'event_type' => 'leaveGroupByClientId',
             'data' => [
                 'client_id' => $client_id,
@@ -392,8 +392,8 @@ $chat->on('leaveGroupByClientId', function($_id, $data){
         ]));
         return;
     }
-    Client::instance()->getJsonPromise([
-        'state' => Client::instance()->leaveGroupBy_Id($group_id, $client_id),
+    Client::instance('worker')->getJsonPromise([
+        'state' => Client::instance('worker')->leaveGroupBy_Id($group_id, $client_id),
     ])->then(function($data) use ($group_id, $client_id) {
         $state = $data['state'];
 
@@ -403,21 +403,21 @@ $chat->on('leaveGroupByClientId', function($_id, $data){
         } elseif ($state === 1) {
             $msg = "已经离开房间-$group_id";
         }
-        Client::instance()->getJsonPromise([
-            'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
-            'join_group_ids' => Client::instance()->getGroupIdsBy_Id($client_id),
+        Client::instance('worker')->getJsonPromise([
+            'group__id_count' => Client::instance('worker')->getGroup_IdCount($group_id),
+            'join_group_ids' => Client::instance('worker')->getGroupIdsBy_Id($client_id),
         ])->then(function($data) use ($client_id, $group_id, $msg) {
             $group__id_count = $data['group__id_count'];
             $join_group_ids = $data['join_group_ids'];
             // 离开房间后发送一条消息（不需要绑定）
-            Client::instance()->sendToGroup($group_id, json_encode([
+            Client::instance('worker')->sendToGroup($group_id, json_encode([
                 'event_type' => 'leaveGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
                     'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$client_id.'】'.$msg
                 ]
             ]));
-            Client::instance()->sendToClient($client_id, json_encode([
+            Client::instance('worker')->sendToClient($client_id, json_encode([
                 'event_type' => 'leaveGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
@@ -437,7 +437,7 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
     $type = $data['type'] ?? 'all';
 
     if (!$group_id){
-        Client::instance()->sendToClient($_id, json_encode([
+        Client::instance('worker')->sendToClient($_id, json_encode([
             'event_type' => 'sendMessageToGroupByClientId',
             'data' => [
                 'client_id' => $_id,
@@ -447,15 +447,15 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
         return;
     }
 
-    Client::instance()->getJsonPromise([
-        'group__id_count' => Client::instance()->getGroup_IdCount($group_id),
-        'is_in_group_by__id' => Client::instance()->isInGroupBy_Id($group_id, $client_id)
+    Client::instance('worker')->getJsonPromise([
+        'group__id_count' => Client::instance('worker')->getGroup_IdCount($group_id),
+        'is_in_group_by__id' => Client::instance('worker')->isInGroupBy_Id($group_id, $client_id)
     ])->then(function($data) use ($client_id, $group_id, $msg, $type) {
         $group__id_count = $data['group__id_count'];
         $is_in_group_by__id = $data['is_in_group_by__id'];
 
         if (!$is_in_group_by__id) {
-            Client::instance()->sendToClient($client_id, json_encode([
+            Client::instance('worker')->sendToClient($client_id, json_encode([
                 'event_type' => 'sendMessageToGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
@@ -472,7 +472,7 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
             ];
         }
 
-        Client::instance()->sendToGroup($group_id, json_encode([
+        Client::instance('worker')->sendToGroup($group_id, json_encode([
             'event_type' => 'sendMessageToGroupByClientId',
             'data' => [
                 'client_id' => $client_id,
@@ -482,7 +482,7 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
 
 
         if ($type === 'other') {
-            Client::instance()->sendToClient($client_id, json_encode([
+            Client::instance('worker')->sendToClient($client_id, json_encode([
                 'event_type' => 'sendMessageToGroupByClientId',
                 'data' => [
                     'client_id' => $client_id,
