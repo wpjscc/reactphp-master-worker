@@ -8,6 +8,8 @@ use React\Socket\TcpConnector;
 class Worker extends Base
 {
 
+    use Traits\HttpServer;
+
     protected $masterAddresses = [];
 
     protected $retrySecond = 3;
@@ -212,6 +214,10 @@ class Worker extends Base
         $this->emit('workerOpen', []);
 
         $this->connectRegister();
+        if (getParam('--is-http-server')) {
+            $this->runHttpServer('worker');
+        }
+
     }
 
     protected function connectRegister()

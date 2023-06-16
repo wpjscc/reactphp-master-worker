@@ -18,7 +18,7 @@ $worker->on('clientOpen', function ($_id, $data) {
 });
 
 $worker->on('clientMessage', function ($_id, $message) {
-    echo 'clientMessage' . PHP_EOL;
+    echo 'clientMessage2222' . PHP_EOL;
     // Client::instance('worker')->sendToClient($_id, json_encode([
     //     'event_type' => 'echo',
     //     'data' => [
@@ -29,6 +29,7 @@ $worker->on('clientMessage', function ($_id, $message) {
     try {
         $data = json_decode($message, true);
         if (isset($data['event_type']) && !in_array($data['event_type'], ['open', 'message', 'close'])) {
+            var_dump($data);
             Chat::instance()->emit($data['event_type'], [$_id, $data['data'] ?? []]);
         }
     } catch (\Throwable $th) {
@@ -42,13 +43,12 @@ $worker->on('clientClose', function ($_id, $data) {
     echo 'clientClose' . PHP_EOL;
 });
 
-$worker->run();
 
 
 $chat = Chat::instance();
 
 
-$chat->on('get_IdData', function($_id, $data){
+$chat->on('get_IdData', function ($_id, $data) {
     Client::instance('worker')->sendToClient($_id, [
         'event_type' => 'echo',
         'data' => [
@@ -522,3 +522,4 @@ $chat->on('sendMessageToGroupByClientId', function($_id, $data){
    
 });
 
+$worker->run();
