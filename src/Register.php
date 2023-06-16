@@ -33,12 +33,17 @@ class Register extends Base
     {
         $this->info('master_coming');
         $this->reply($connection);
-        $this->masters->attach($connection, $data);
+        // $this->masters->attach($connection, $data);
+        
+        ConnectionManager::instance('register_master')->addConnection($connection, $data);
+        ConnectionManager::instance('register_master')->bindId('master', $connection->_id);
+        ConnectionManager::instance('register_master')->joinGroupById('master', 'master');
+
         $this->broadcastToWorkers($connection);
     }
     
 
-    public function reply(ConnectionInterface $connection)
+    protected function reply(ConnectionInterface $connection)
     {
         $this->write($connection, [
             'event' => 'register_reply',
@@ -46,41 +51,42 @@ class Register extends Base
         ]);
     }
 
-    protected function broadcastToWorkers(ConnectionInterface $master, $workers = [])
+    protected function broadcastToWorkers(ConnectionInterface $master)
     {
-        $workers = $workers ?: $this->workers;
-
-        foreach ($workers as $worker) {
-            $this->write($worker, [
-                'event' => 'broadcast_master_address',
-                'data' => $this->masters[$master]
-            ]);
-        }
+        // 给所有worker 发送当前的 master 数据
+        ConnectionManager::instance('register_worker')->broadcast([
+            'event' => 'broadcast_master_address',
+            'data' => ConnectionManager::instance('register_master')->getConnectionData($master)
+        ]);
     }
 
     protected function _worker_coming(ConnectionInterface $connection, $data)
     {
         $this->info('worker_coming');
         $this->reply($connection);
-        $this->workers->attach($connection, $data);
+        // $this->workers->attach($connection, $data);
+
+        ConnectionManager::instance('register_worker')->addConnection($connection, $data);
+        ConnectionManager::instance('register_worker')->bindId('worker', $connection->_id);
+        ConnectionManager::instance('register_worker')->joinGroupById('worker', 'worker');
+
         $this->broadcastMasterToWorkerByWorker($connection);
     }
 
     protected function broadcastMasterToWorkerByWorker(ConnectionInterface $worker)
     {
-        foreach ($this->masters as $master) {
-            $this->broadcastToWorkers($master, [$worker]);
-        }
+        // 给当前连接过来的 worker 发送所有master数据
+        ConnectionManager::instance('register_master')->broadcastToConnection($worker, [
+            'event' => 'broadcast_master_address',
+        ]);
     }
 
     protected function _close(ConnectionInterface $connection)
     {
-        if ($this->masters->contains($connection)) {
-            $this->masters->detach($connection);
+        if (ConnectionManager::instance('register_master')->closeConnection($connection)) {
             $this->info('master_close');
         }
-        elseif ($this->workers->contains($connection)) {
-            $this->workers->detach($connection);
+        elseif (ConnectionManager::instance('register_worker')->closeConnection($connection)) {
             $this->info('worker_close');
         }
     }

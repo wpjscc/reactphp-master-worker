@@ -70,12 +70,9 @@ class ConnectionManager
                     unset($this->id_to_connection_ids[$id]);
                 }
             }
+            return true;
         }
-        return [
-            'id' => $id,
-            '_id' => $_id,
-            'group_ids' => $groupIds,
-        ];
+        return false;
 
     }
 
@@ -439,6 +436,23 @@ class ConnectionManager
                 continue;
             }
             $this->send($connection, $msg);
+        }
+    }
+    
+    // 广播数据给toConnection
+    public function broadcastToConnection($toConnection, $data = [], $exclude_Ids = [])
+    {
+        foreach ($this->connections as $connection) {
+
+            if (in_array($connection->_id, $exclude_Ids)) {
+                continue;
+            }
+
+            if (empty($data['data'])) {
+                $data['data'] = $this->connections[$connection];
+            }
+
+            $this->send($toConnection, $data);
         }
     }
 
