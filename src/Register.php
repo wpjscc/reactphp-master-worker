@@ -7,13 +7,9 @@ use React\Socket\SocketServer;
 
 class Register extends Base
 {
-    protected $masters;
-    protected $workers;
 
     protected function init()
     {
-        $this->workers = new \SplObjectStorage;
-        $this->masters = new \SplObjectStorage;
 
         $this->on('open', [$this, '_open']);
         $this->on('master_coming', [$this, '_master_coming']);
