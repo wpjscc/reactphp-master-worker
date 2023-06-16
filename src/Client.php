@@ -246,6 +246,17 @@ class Client extends EventEmitter
         ];
         return $this->commonClientMethod(__FUNCTION__, $data);
     }
+
+    public function broadcast($message, $exclude_Ids = [])
+    {
+        $data = [
+            'client_id' => '',
+            'message_id' => uniqid(),
+            'exclude__ids' => $exclude_Ids,
+            'message' => $message,
+        ];
+        return $this->commonClientMethod(__FUNCTION__, $data);
+    }
     
 
     public function get_IdData($_id)
@@ -319,17 +330,6 @@ class Client extends EventEmitter
             return array_reduce($data, 'array_merge', []);
         });
 
-    }
-
-    public function broadcast($message, $exclude_Ids = [])
-    {
-        $data = [
-            'client_id' => '',
-            'message_id' => uniqid(),
-            'exclude__ids' => $exclude_Ids,
-            'message' => $message,
-        ];
-        return $this->commonMasterMethod(__FUNCTION__, $data);
     }
 
     public function isOnline_Id($_id)

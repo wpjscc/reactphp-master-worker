@@ -170,10 +170,7 @@ class Register extends Base
             $methodToParams = [];
             $extra = [];
             foreach ($events as $method) {
-                if (method_exists(Client::instance('register'), $method) 
-                    && isset($params[$method]) 
-                    && is_array($params[$method])
-                ){
+                if (method_exists(Client::instance('register'), $method)) {
                     $className = get_class(Client::instance('register'));
                     $rp = new \ReflectionClass($className);
                     $methodParameters = [];
