@@ -166,7 +166,7 @@ class Master extends Base
                 'client_id' => $connection->_id,
                 // client msg
                 'data' => [
-                    'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
+                    // 'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
                 ]
             ]
         ]);
@@ -213,19 +213,22 @@ class Master extends Base
 
         // unset($this->client_id_to_client[$connection->id]);
 
-        ConnectionManager::instance('worker')->randSendToConnection([
-            'event' => 'client_close',
-            'data' => [
-                'client_id' => $connection->_id,
-                // client msg
+        if (ConnectionManager::instance('client')->getConnectionBy_Id($connection->_id)) {
+            ConnectionManager::instance('worker')->randSendToConnection([
+                'event' => 'client_close',
                 'data' => [
-                    'getIdBy_Id' => ConnectionManager::instance('client')->getIdBy_Id($connection->_id),
-                    'getGroupIdsBy_Id' => ConnectionManager::instance('client')->getGroupIdsBy_Id($connection->_id)
+                    'client_id' => $connection->_id,
+                    // client msg
+                    'data' => [
+                        'getIdBy_Id' => ConnectionManager::instance('client')->getIdBy_Id($connection->_id),
+                        'getGroupIdsBy_Id' => ConnectionManager::instance('client')->getGroupIdsBy_Id($connection->_id)
+                    ]
                 ]
-            ]
-        ]);
-
-        ConnectionManager::instance('client')->closeConnection($connection);
+            ]);
+    
+            ConnectionManager::instance('client')->closeConnection($connection);
+        }
+        
 
     }
     

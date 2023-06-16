@@ -10,11 +10,20 @@ require __DIR__.'/chat.php';
 $worker = Worker::instance();
 
 $worker->on('workerOpen', function () {
+    
     echo 'workerOpen' . PHP_EOL;
 });
 
 $worker->on('clientOpen', function ($_id, $data) {
     echo 'clientOpen' . PHP_EOL;
+    Client::instance('worker')->sendToClient($_id, json_encode([
+        'event_type' => 'bind',
+        'data' => [
+            // 'client_id' => $conn->client_id.'-'. $conn->_id,
+            'client_id' => $_id,
+            'msg' => 'client_id:'. $_id
+        ]
+    ]));
 });
 
 $worker->on('clientMessage', function ($_id, $message) {
@@ -41,7 +50,24 @@ $worker->on('clientMessage', function ($_id, $message) {
 
 $worker->on('clientClose', function ($_id, $data) {
     echo 'clientClose--'.$_id . PHP_EOL;
-    var_dump($data);
+    $getGroupIdsBy_Id = $data['getGroupIdsBy_Id'] ?? [];
+
+    foreach ($getGroupIdsBy_Id as $group_id) {
+        Client::instance('worker')->getJsonPromise([
+            'group__id_count' => Client::instance('worker')->getGroup_IdCount($group_id)
+        ])->then(function($data) use ($group_id, $_id) {
+            $group__id_count = $data['group__id_count'];
+            Client::instance('worker')->sendToGroup($group_id, [
+                'event_type' => 'leaveGroupByClientId',
+                'data' => [
+                    'client_id' => $_id,
+                    'msg' => "【 worker 房间-$group_id -人数-$group__id_count 】".'【'.$_id.'】'.'离开了房间'
+                ]
+            ]);
+        });
+       
+    }
+
 });
 
 
