@@ -163,7 +163,7 @@ class Register extends Base
             );
         });
 
-        $app->get('/events/{event}', function (ServerRequestInterface $request) {
+        $app->map(['GET', 'POST'], '/events/{event}', function (ServerRequestInterface $request) {
             $params = $request->getQueryParams();
             $event = $request->getAttribute('event');
             $events = explode(',', $event);
