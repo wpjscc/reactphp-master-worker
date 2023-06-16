@@ -236,6 +236,9 @@ class ConnectionManager
     public function get_IdData($_id)
     {
         $connection = $this->connection_id_to_connection[$_id] ?? null;
+        if (!$connection) {
+            return [];
+        }
         return $this->getConnectionData($connection);
     }
 

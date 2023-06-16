@@ -5,13 +5,12 @@ namespace Wpjscc\MasterWorker;
 use Evenement\EventEmitter;
 use React\Promise\Deferred;
 use React\Socket\ConnectionInterface;
-use WyriHaximus\React\Stream\Json\JsonStream;
-use React\Stream\ThroughStream;
 
 class Client extends EventEmitter
 {
     use \Wpjscc\MasterWorker\Traits\Singleton;
     use \Wpjscc\MasterWorker\Traits\Write;
+    use \Wpjscc\MasterWorker\Traits\JsonPromise;
 
     protected function init()
     {
@@ -420,23 +419,6 @@ class Client extends EventEmitter
         });
     }
 
-    public function getJsonPromise($array = [])
-    {
-        $deferred = new Deferred();
-        $buffer = '';
-        $jsonStream = new JsonStream();
-        $jsonStream->on('data', function($data) use (&$buffer) {
-            $buffer .= $data;
-        });
-
-        $jsonStream->on('end', function () use (&$buffer,$deferred){
-            $deferred->resolve(json_decode($buffer, true));
-            $buffer = '';
-        });
-
-        $jsonStream->end($array);
-        return $deferred->promise();
-    }
 
     protected function commonClientMethod($event, $data)
     {

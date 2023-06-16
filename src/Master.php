@@ -22,7 +22,7 @@ class Master extends Base
         // 注册中心
         $this->on('register_open', [$this, '_register_open']);
         $this->on('register_reply', [$this, '_register_reply']);
-        // todo registe message
+        $this->on('register_message', [$this, '_register_message']);
         $this->on('register_close', [$this, '_register_close']);
 
         // worker
@@ -55,6 +55,18 @@ class Master extends Base
     protected function _register_reply(ConnectionInterface $connection)
     {
         $this->info('register_reply');
+    }
+
+
+    protected function _register_message(ConnectionInterface $connection, $data)
+    {
+        $this->info('register_message');
+        var_dump($data);
+        $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
+        if ($event) {
+            Client::instance('register')->emit('register_'.$event, [$connection, $data['data'] ?? []]);
+        }
+
     }
 
     protected function _register_close(ConnectionInterface $connection)
