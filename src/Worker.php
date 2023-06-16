@@ -184,7 +184,7 @@ class Worker extends Base
         $this->info('client_open');
         // todo 业务处理 client open
         $clientId = $data['client_id'] ?? '';
-        $data = $data['message'] ?? '';
+        $data = $data['data'] ?? [];
         $this->emit('clientOpen', [$clientId, $data]);
     }
 
@@ -204,7 +204,7 @@ class Worker extends Base
         $this->info('client_close');
         // todo client close
         $clientId = $data['client_id'] ?? '';
-        $data = $data['message'] ?? '';
+        $data = $data['data'] ?? [];
         $this->emit('clientClose', [$clientId, $data]);
     }
     

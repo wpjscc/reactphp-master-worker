@@ -36,8 +36,11 @@ class ConnectionManager
             $connection->_id = bin2hex(openssl_random_pseudo_bytes(16));
         }
 
-        $this->connections->attach($connection, $data);
-        $this->connection_id_to_connection[$connection->_id] = $connection;
+        if (!$this->connections->contains($connection)) {
+            $this->connections->attach($connection, $data);
+            $this->connection_id_to_connection[$connection->_id] = $connection;
+        }
+
 
         // $that = $this;
         // 监听关闭连接事件
@@ -503,6 +506,11 @@ class ConnectionManager
     public function isOnline_Id($_id)
     {
         return isset($this->connection_id_to_connection[$_id]);
+    }
+
+    public function getIdBy_Id($_id)
+    {
+        return $this->_getIdBy_Id($_id);
     }
 
 

@@ -144,7 +144,7 @@ class Master extends Base
 
     // client
     // 客户端链接打开 转给 worker
-    protected function _client_open($connection, $msg)
+    protected function _client_open($connection, $data)
     {
         // $_worker = $this->getWorker($connection);
         // if ($_worker) {
@@ -159,7 +159,17 @@ class Master extends Base
 
         // $this->client_id_to_client[$connection->id] = $connection;
 
-        ConnectionManager::instance('client')->addConnection($connection, $msg);
+        ConnectionManager::instance('client')->addConnection($connection, $data);
+        ConnectionManager::instance('worker')->randSendToConnection([
+            'event' => 'client_open',
+            'data' => [
+                'client_id' => $connection->_id,
+                // client msg
+                'data' => [
+                    'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
+                ]
+            ]
+        ]);
     }
     // 客户端消息 转给 worker
     protected function _client_message($connection, $msg)
@@ -202,6 +212,18 @@ class Master extends Base
         // }
 
         // unset($this->client_id_to_client[$connection->id]);
+
+        ConnectionManager::instance('worker')->randSendToConnection([
+            'event' => 'client_close',
+            'data' => [
+                'client_id' => $connection->_id,
+                // client msg
+                'data' => [
+                    'getIdBy_Id' => ConnectionManager::instance('client')->getIdBy_Id($connection->_id),
+                    'getGroupIdsBy_Id' => ConnectionManager::instance('client')->getGroupIdsBy_Id($connection->_id)
+                ]
+            ]
+        ]);
 
         ConnectionManager::instance('client')->closeConnection($connection);
 

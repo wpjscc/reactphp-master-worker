@@ -40,7 +40,8 @@ $worker->on('clientMessage', function ($_id, $message) {
 });
 
 $worker->on('clientClose', function ($_id, $data) {
-    echo 'clientClose' . PHP_EOL;
+    echo 'clientClose--'.$_id . PHP_EOL;
+    var_dump($data);
 });
 
 
