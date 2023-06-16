@@ -15,6 +15,7 @@ class Client extends EventEmitter
     protected function init()
     {
         // 收到 worker 或 register 的消息 (在 master 中处理)
+        $this->on($this->key.'_closeClient', [$this, '_master_closeClient']);
         $this->on($this->key.'_sendToClient', [$this, '_master_sendToClient']);
         $this->on($this->key.'_sendToGroup', [$this, '_master_sendToGroup']);
         $this->on($this->key.'_broadcast', [$this, '_master_broadcast']);
@@ -33,6 +34,20 @@ class Client extends EventEmitter
 
 
     // 在master 中处理
+
+    protected function _master_closeClient(ConnectionInterface $connection, $data)
+    {
+        $_id = $data['_id'] ?? '';
+        $message = $data['message'] ?? '';
+        $clientKey = $data['client_key'] ?? 'client';
+        if (is_array($message)) {
+            $message = json_encode($message);
+        }
+        ConnectionManager::instance($clientKey)->closeConnection(
+            ConnectionManager::instance($clientKey)->getConnectionBy_Id($_id),
+            $message
+        );
+    }
 
     protected function _master_sendToClient(ConnectionInterface $connection, $data)
     {
@@ -220,6 +235,18 @@ class Client extends EventEmitter
 
 
     // 以下在 worker 或 register 中调用
+
+    public function closeClient($_id, $message = '')
+    {
+        $event = __FUNCTION__;
+        $data = [
+            '_id' => $_id,
+            'message_id' => uniqid(),
+            'message' => $message,
+        ];
+
+        return $this->commonClientMethod($event, $data);
+    }
 
     public function sendToClient($_id, $message, $id = 0, $exclude_Ids = [])
     {

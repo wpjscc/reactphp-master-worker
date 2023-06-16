@@ -52,29 +52,35 @@ class ConnectionManager
     }
 
     // 外部调用关闭连接
-    public function closeConnection($connection)
+    public function closeConnection($connection, $message = '')
     {
         $id = 0;
         $_id = $connection->_id ?? 0;
         $groupIds = [];
-        if ($this->connections->contains($connection)){
-            $this->connections->detach($connection);
-            unset($this->connection_id_to_connection[$connection->_id]);
-            // 当前_id 假如的分组ID
-            $groupIds = $this->connection_id_to_group_ids[$connection->_id] ?? [];
-            $this->_leaveAllGroup($connection);
-            
-            // 清除ID和_id 的对应关系
-            $id = $this->_getIdBy_Id($connection->_id);
-            if ($id) {
-                unset($this->connection_id_to_id[$connection->_id]);
-                unset($this->id_to_connection_ids[$id][$connection->_id]);
-                if (count($this->id_to_connection_ids[$id]) == 0) {
-                    unset($this->id_to_connection_ids[$id]);
+        if ($connection) {
+            if ($this->connections->contains($connection)){
+                $this->connections->detach($connection);
+                unset($this->connection_id_to_connection[$connection->_id]);
+                // 当前_id 假如的分组ID
+                $groupIds = $this->connection_id_to_group_ids[$connection->_id] ?? [];
+                $this->_leaveAllGroup($connection);
+                
+                // 清除ID和_id 的对应关系
+                $id = $this->_getIdBy_Id($connection->_id);
+                if ($id) {
+                    unset($this->connection_id_to_id[$connection->_id]);
+                    unset($this->id_to_connection_ids[$id][$connection->_id]);
+                    if (count($this->id_to_connection_ids[$id]) == 0) {
+                        unset($this->id_to_connection_ids[$id]);
+                    }
                 }
+                if (method_exists($connection, 'close')) {
+                    $connection->close(1000, $message);
+                }
+                return true;
             }
-            return true;
-        }
+        } 
+       
         return false;
 
     }

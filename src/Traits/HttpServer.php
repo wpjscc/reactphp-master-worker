@@ -57,7 +57,6 @@ trait HttpServer
                             }
                         }
                     }
-                    sort($methodParameters);
                     $methodToParams[$method] = $methodParameters;
                 } else {
                     $extra[] = "方法 $method 不存在 或 缺少参数";
