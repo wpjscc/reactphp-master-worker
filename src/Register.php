@@ -105,6 +105,8 @@ class Register extends Base
         elseif (ConnectionManager::instance('register_worker')->closeConnection($connection)) {
             $this->info('worker_close');
         }
+        $this->info('close');
+        
     }
 
 

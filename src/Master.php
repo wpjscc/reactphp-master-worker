@@ -10,10 +10,6 @@ use Clue\React\NDJson\Decoder;
 class Master extends Base
 {
 
-    protected $workers = [];
-
-    protected $client_id_to_client = [];
-
     protected $retrySecond = 3;
 
     protected function init()
@@ -36,9 +32,9 @@ class Master extends Base
         $this->on('client_message', [$this, '_client_message']);
         $this->on('client_close', [$this, '_client_close']);
 
-        // worker message
-        $this->on('worker_client_message', [$this, '_worker_client_message']);
-        $this->on('worker_client_close', [$this, '_worker_client_close']);
+        // // worker message
+        // $this->on('worker_client_message', [$this, '_worker_client_message']);
+        // $this->on('worker_client_close', [$this, '_worker_client_close']);
 
         $this->on('ping', [$this, '_ping']);
         $this->on('pong', [$this, '_pong']);
@@ -87,7 +83,6 @@ class Master extends Base
         $this->info('worker_coming');
         $this->replyWorker($connection);
         // todo  $data 验证信息
-        // $this->addWorker($connection);
         ConnectionManager::instance('worker')->addConnection($connection, $data);
 
         $this->info('worker_count:'. ConnectionManager::instance('worker')->getConnectionCount());
@@ -126,39 +121,12 @@ class Master extends Base
         ]);
     }
 
-    protected function addWorker(ConnectionInterface $connection)
-    {
-        if (array_search($connection, $this->workers) === false) {
-            $this->workers[] = $connection;
-        }
-    }
-
-    protected function removeWorker(ConnectionInterface $connection)
-    {
-        $index = array_search($connection, $this->workers);
-        if ($index !== false) {
-            unset($this->workers[$index]);
-        }
-    }
-
 
     // client
     // 客户端链接打开 转给 worker
     protected function _client_open($connection, $data)
     {
-        // $_worker = $this->getWorker($connection);
-        // if ($_worker) {
-        //     $this->write($_worker, [
-        //         'event' => 'client_open',
-        //         'data' => [
-        //             'client_id' => $connection->id,
-        //             'message' => $msg
-        //         ]
-        //     ]);
-        // }
-
-        // $this->client_id_to_client[$connection->id] = $connection;
-
+        
         ConnectionManager::instance('client')->addConnection($connection, $data);
         ConnectionManager::instance('worker')->randSendToConnection([
             'event' => 'client_open',
@@ -174,20 +142,6 @@ class Master extends Base
     // 客户端消息 转给 worker
     protected function _client_message($connection, $msg)
     {
-        // $_worker = $this->getWorker($connection);
-        // if ($_worker) {
-        //     $this->write($_worker, [
-        //         'event' => 'client_message',
-        //         'data' => [
-        //             'client_id' => $connection->_id,
-        //             // client msg
-        //             'message' => $msg
-        //         ]
-        //     ]);
-        //     return true;
-        // }
-        // return false;
-
         // todo worker 发送消息 
         ConnectionManager::instance('worker')->randSendToConnection([
             'event' => 'client_message',
@@ -202,18 +156,10 @@ class Master extends Base
     // 客户端关闭 转给 worker
     protected function _client_close($connection)
     {
-        // if (isset($connection->_worker)) {
-        //     $this->write($connection->_worker, [
-        //         'event' => 'client_close',
-        //         'data' => [
-        //             'client_id' => $connection->_id
-        //         ]
-        //     ]);
-        // }
-
-        // unset($this->client_id_to_client[$connection->id]);
 
         if (ConnectionManager::instance('client')->getConnectionBy_Id($connection->_id)) {
+            ConnectionManager::instance('client')->closeConnection($connection);
+
             ConnectionManager::instance('worker')->randSendToConnection([
                 'event' => 'client_close',
                 'data' => [
@@ -226,33 +172,8 @@ class Master extends Base
                 ]
             ]);
     
-            ConnectionManager::instance('client')->closeConnection($connection);
         }
         
-
-    }
-    
-    // 收到worker 的客户端信息
-    protected function _worker_client_message(ConnectionInterface $connection, $data)
-    {
-        // $client_id = $data['client_id'] ?? '';
-        // $client = $this->client_id_to_client[$client_id] ?? '';
-        // if ($client) {
-        //     $client->write($data['message'] ?? '');
-        // }
-        // todo todo一个公共的处理消息的方法
-    }
-    // worker 主动关闭 客户端
-    protected function _worker_client_close(ConnectionInterface $connection, $data)
-    {
-        // $client_id = $data['client_id'] ?? '';
-        // $client = $this->client_id_to_client[$client_id] ?? '';
-        // if ($client) {
-        //     $client->end($data['message'] ?? '');
-        //     unset($this->client_id_to_client[$client_id]);
-        // }
-        // todo 关闭
-        ConnectionManager::instance('client')->closeConnection($connection);
 
     }
 
@@ -289,34 +210,40 @@ class Master extends Base
     {
         $tcpConnector = new TcpConnector();
         $tcpConnector->connect(getParam('--register-address'))->then(function (ConnectionInterface $connection) {
-            Master::instance()->emit('register_open', [$connection]);
-            Master::instance()->write($connection, [
-                'event' => 'master_coming',
-                'data' => [
-                    'master_address' => getParam('--master-address')
-                ]
-            ]);
-
-            $ndjson = new Decoder($connection, true);
-            $ndjson->on('data', function ($data) use ($connection) {
-                $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
-                if ($event) {
-                    Master::instance()->emit($event, [$connection, $data['data'] ?? []]);
-                }
-            });
+            try {
+                Master::instance()->emit('register_open', [$connection]);
+                Master::instance()->write($connection, [
+                    'event' => 'master_coming',
+                    'data' => [
+                        'master_address' => getParam('--master-address')
+                    ]
+                ]);
     
-            $ndjson->on('close', function () use ($connection) {
-                Master::instance()->emit('register_close', [$connection]);
-            });
+                $ndjson = new Decoder($connection, true);
+                $ndjson->on('data', function ($data) use ($connection) {
+                    $event = ($data['cmd'] ?? '') ?: ($data['event'] ?? '');
+                    if ($event) {
+                        Master::instance()->emit($event, [$connection, $data['data'] ?? []]);
+                    }
+                });
+        
+                $ndjson->on('close', function () use ($connection) {
+                    Master::instance()->emit('register_close', [$connection]);
+                });
+    
+                // 非本地 和注册中心保持心跳
+                if (strpos(getParam('--register-address'), '127.0.0.1') !== 0) {
+                    Master::instance()->ping($connection);
+                }
+    
+                $connection->on('close', function() {
+                    Master::instance()->retryConnectRegister();
+                });
+            } catch (\Throwable $th) {
+                Master::instance()->info($th);
 
-            // 非本地 和注册中心保持心跳
-            if (strpos(getParam('--register-address'), '127.0.0.1') !== 0) {
-                Master::instance()->ping($connection);
             }
-
-            $connection->on('close', function() {
-                Master::instance()->retryConnectRegister();
-            });
+            
 
 
         }, function ($exception) {

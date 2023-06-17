@@ -59,6 +59,7 @@ class ConnectionManager
         $groupIds = [];
         if ($connection) {
             if ($this->connections->contains($connection)){
+                $this->connections[$connection] = null;
                 $this->connections->detach($connection);
                 unset($this->connection_id_to_connection[$connection->_id]);
                 // 当前_id 假如的分组ID

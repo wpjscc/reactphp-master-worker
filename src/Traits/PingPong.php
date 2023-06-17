@@ -6,7 +6,7 @@ use React\Socket\ConnectionInterface;
 
 trait PingPong
 {
-    public $pingRate = 5;
+    public $pingRate = 50;
 
     public function ping(ConnectionInterface $connection)
     {
