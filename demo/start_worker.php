@@ -72,8 +72,25 @@ $worker->on('clientClose', function ($_id, $data) {
 
 
 
+
+
 $chat = Chat::instance();
 
+
+$chat->on('sendMessage', function($_id, $data){
+    $data['group_id'] = $data['group_id'] ?? 1;
+    Client::instance('worker')->getJsonPromise([
+        'state' => Client::instance('worker')->joinGroupBy_Id($data['group_id'], $_id),
+    ])->then(function($data1) use ($data, $_id) {
+         // 加入房间后发送一条消息（不需要绑定）
+         $data['client_id'] = $_id;
+         Client::instance('worker')->sendToGroup($data['group_id'], [
+            'event_type' => 'sendMessage',
+            'data' => $data
+        ]);
+    });
+
+});
 
 $chat->on('get_IdData', function ($_id, $data) {
     Client::instance('worker')->sendToClient($_id, [
