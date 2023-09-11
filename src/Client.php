@@ -23,12 +23,19 @@ class Client extends EventEmitter
         $this->on($this->key.'_bindId', [$this, '_master_bindId']);
         $this->on($this->key.'_unBindId', [$this, '_master_unBindId']);
         $this->on($this->key.'_unBind_Id', [$this, '_master_unBind_Id']);
+        $this->on($this->key.'_getOnlineIds', [$this, '_master_getOnlineIds']);
         $this->on($this->key.'_getOnline_Ids', [$this, '_master_getOnline_Ids']);
+        $this->on($this->key.'_isOnlineId', [$this, '_master_isOnlineId']);
         $this->on($this->key.'_isOnline_Id', [$this, '_master_isOnline_Id']);
+        $this->on($this->key.'_isInGroupById', [$this, '_master_isInGroupById']);
         $this->on($this->key.'_isInGroupBy_Id', [$this, '_master_isInGroupBy_Id']);
+        $this->on($this->key.'_joinGroupById', [$this, '_master_joinGroupById']);
         $this->on($this->key.'_joinGroupBy_Id', [$this, '_master_joinGroupBy_Id']);
+        $this->on($this->key.'_leaveGroupById', [$this, '_master_leaveGroupById']);
         $this->on($this->key.'_leaveGroupBy_Id', [$this, '_master_leaveGroupBy_Id']);
+        $this->on($this->key.'_getGroupIdCount', [$this, '_master_getGroupIdCount']);
         $this->on($this->key.'_getGroup_IdCount', [$this, '_master_getGroup_IdCount']);
+        $this->on($this->key.'_getGroupIdsById', [$this, '_master_getGroupIdsById']);
         $this->on($this->key.'_getGroupIdsBy_Id', [$this, '_master_getGroupIdsBy_Id']);
     }
 
@@ -145,10 +152,36 @@ class Client extends EventEmitter
         ]);
     }
 
+    protected function _master_getOnlineIds(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->getIds();
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
     protected function _master_getOnline_Ids(ConnectionInterface $connection, $data)
     {
         $clientKey = $data['client_key'] ?? 'client';
         $data['data'] = ConnectionManager::instance($clientKey)->get_Ids();
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
+    protected function _master_isOnlineId(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->isOnlineId($data['id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -170,6 +203,20 @@ class Client extends EventEmitter
             ],
         ]);
     }
+
+    protected function _master_isInGroupById(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+        $data['data'] = ConnectionManager::instance($clientKey)->isInGroupById($data['group_id'] ?? '', $data['id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
     protected function _master_isInGroupBy_Id(ConnectionInterface $connection, $data)
     {
         $clientKey = $data['client_key'] ?? 'client';
@@ -182,6 +229,21 @@ class Client extends EventEmitter
             ],
         ]);
     }
+
+    protected function _master_joinGroupById(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+
+        $data['data'] = ConnectionManager::instance($clientKey)->joinGroupById($data['group_id'] ?? '', $data['id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
     protected function _master_joinGroupBy_Id(ConnectionInterface $connection, $data)
     {
         $clientKey = $data['client_key'] ?? 'client';
@@ -194,6 +256,21 @@ class Client extends EventEmitter
             ],
         ]);
     }
+
+    protected function _master_leaveGroupById(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+
+        $data['data'] = ConnectionManager::instance($clientKey)->leaveGroupById($data['group_id'] ?? '', $data['id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
     protected function _master_leaveGroupBy_Id(ConnectionInterface $connection, $data)
     {
         $clientKey = $data['client_key'] ?? 'client';
@@ -207,10 +284,38 @@ class Client extends EventEmitter
         ]);
     }
 
+    protected function _master_getGroupIdCount(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+
+        $data['data'] = ConnectionManager::instance($clientKey)->getGroupIdCount($data['group_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
     protected function _master_getGroup_IdCount(ConnectionInterface $connection, $data)
     {
         $clientKey = $data['client_key'] ?? 'client';
         $data['data'] = ConnectionManager::instance($clientKey)->getGroup_IdCount($data['group_id'] ?? '');
+        $this->write($connection, [
+            'cmd' => 'master_message',
+            'data' => [
+                'event' => str_replace('_master_', '', __FUNCTION__),
+                'data' => $data
+            ],
+        ]);
+    }
+
+    protected function _master_getGroupIdsById(ConnectionInterface $connection, $data)
+    {
+        $clientKey = $data['client_key'] ?? 'client';
+
+        $data['data'] = ConnectionManager::instance($clientKey)->getGroupIdsById($data['id'] ?? '');
         $this->write($connection, [
             'cmd' => 'master_message',
             'data' => [
@@ -302,12 +407,15 @@ class Client extends EventEmitter
             'id' => $id,
             '_id' => $_id
         ])->then(function($data) {
+            // 绑定成功
             if (in_array(0, $data)) {
                 return 0;
             } 
+            // 已经绑定过
             elseif (in_array(1, $data)) {
                 return 1;
             }
+            //绑定失败
             elseif (in_array(2, $data)) {
                 return 2;
             }
@@ -350,6 +458,13 @@ class Client extends EventEmitter
 
     }
 
+    public function getOnlineIds()
+    {
+        return $this->commonMasterMethod(__FUNCTION__)->then(function($data) {
+            return array_reduce($data, 'array_merge', []);
+        });
+    }
+
     public function getOnline_Ids()
     {
 
@@ -358,10 +473,27 @@ class Client extends EventEmitter
         });
 
     }
+    
+    public function isOnlineId($id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, ['id' => $id])->then(function($data){
+            return empty(array_filter($data)) ? false : true;
+        });
+    }
 
     public function isOnline_Id($_id)
     {
         return $this->commonMasterMethod(__FUNCTION__, ['_id' => $_id])->then(function($data){
+            return empty(array_filter($data)) ? false : true;
+        });
+    }
+
+    public function isInGroupById($group_id, $id)
+    {
+        return $this->commonMasterMethod(__FUNCTION__, [
+            'group_id' => $group_id,
+            'id' => $id,
+        ])->then(function($data){
             return empty(array_filter($data)) ? false : true;
         });
     }
@@ -373,6 +505,30 @@ class Client extends EventEmitter
             '_id' => $_id,
         ])->then(function($data){
             return empty(array_filter($data)) ? false : true;
+        });
+    }
+
+    public function joinGroupById($group_id, $id)
+    {
+        $data = [
+            'id' => $id,
+            'group_id' => $group_id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            // 加入成功
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            // 已经加入过
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            // 加入失败
+            elseif (in_array(2, $data)) {
+                return 2;
+            }
+            // 不可能出现这个
+            return 3;
         });
     }
 
@@ -392,6 +548,30 @@ class Client extends EventEmitter
                 return 1;
             }
             // 加入失败
+            elseif (in_array(2, $data)) {
+                return 2;
+            }
+            // 不可能出现这个
+            return 3;
+        });
+    }
+
+    public function leaveGroupById($group_id, $id)
+    {
+        $data = [
+            'id' => $id,
+            'group_id' => $group_id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            // 离开成功
+            if (in_array(0, $data)) {
+                return 0;
+            } 
+            // 没在群中
+            elseif (in_array(1, $data)) {
+                return 1;
+            }
+            // 没有该链接
             elseif (in_array(2, $data)) {
                 return 2;
             }
@@ -424,6 +604,17 @@ class Client extends EventEmitter
         });
     }
 
+    public function getGroupIdCount($group_id)
+    {
+        $data = [
+            'group_id' => $group_id,
+        ];
+
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            return array_sum($data);
+        });
+    }
+
     public function getGroup_IdCount($group_id)
     {
         $data = [
@@ -433,6 +624,16 @@ class Client extends EventEmitter
         return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
 
             return array_sum($data);
+        });
+    }
+
+    public function getGroupIdsById($id)
+    {
+        $data = [
+            'id' => $id,
+        ];
+        return $this->commonMasterMethod(__FUNCTION__, $data)->then(function($data){
+            return array_reduce($data, 'array_merge', []);
         });
     }
 

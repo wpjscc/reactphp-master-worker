@@ -37,7 +37,7 @@ $worker->on('clientMessage', function ($_id, $message) {
     // ]));
     try {
         $data = json_decode($message, true);
-        if (isset($data['event_type']) && !in_array($data['event_type'], ['open', 'message', 'close'])) {
+        if (isset($data['event_type']) && !in_array($data['event_type'], ['open', 'close'])) {
             var_dump($data);
             Chat::instance()->emit($data['event_type'], [$_id, $data['data'] ?? []]);
         }
@@ -75,6 +75,10 @@ $worker->on('clientClose', function ($_id, $data) {
 
 
 $chat = Chat::instance();
+
+$chat->on('message', function($_id, $data){
+
+});
 
 
 $chat->on('sendMessage', function($_id, $data){

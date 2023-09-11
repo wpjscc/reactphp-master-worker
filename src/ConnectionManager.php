@@ -332,9 +332,15 @@ class ConnectionManager
     public function joinGroupById($groupId, $id)
     {
         $_ids = $this->_get_IdsById($id);
+        $state = 2;
+
         foreach ($_ids as $_id) {
-            $this->joinGroupBy_Id($groupId, $_id);
+            $_state = $this->joinGroupBy_Id($groupId, $_id);
+            if ($_state < $state) {
+                $state = $_state;
+            }
         }
+        return $state;
     }
 
     public function joinGroupBy_Id($groupId, $_id)
@@ -349,9 +355,14 @@ class ConnectionManager
     public function leaveGroupById($groupId, $id)
     {
         $_ids = $this->_get_IdsById($id);
+        $state = 2;
         foreach ($_ids as $_id) {
-            $this->leaveGroupBy_Id($groupId, $_id);
+            $_state = $this->leaveGroupBy_Id($groupId, $_id);
+            if ($_state < $state) {
+                $state = $_state;
+            }
         }
+        return $state;
     }
 
     public function leaveGroupBy_Id($groupId, $_id)
