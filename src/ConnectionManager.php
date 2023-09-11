@@ -512,7 +512,9 @@ class ConnectionManager
         $connection = $this->getRandConnection();
         if ($connection) {
             $this->send($connection, $data);
+            return true;
         }
+        return false;
     }
 
 

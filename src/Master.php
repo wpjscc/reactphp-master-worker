@@ -128,22 +128,33 @@ class Master extends Base
     {
         
         ConnectionManager::instance('client')->addConnection($connection, $data);
-        ConnectionManager::instance('worker')->randSendToConnection([
+
+        $state = ConnectionManager::instance('worker')->randSendToConnection([
             'event' => 'client_open',
             'data' => [
                 'client_id' => $connection->_id,
                 // client msg
                 'data' => [
-                    // 'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
+                    'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
                 ]
             ]
         ]);
+
+        // 说明没有worker--没必要在再去实现，理论上会有worker
+        // if (!$state) {
+        //     Worker::instance('master')->emit('clientOpen', [
+        //         $connection->_id,
+        //         [
+        //             'get_IdData' => ConnectionManager::instance('client')->get_IdData($connection->_id),
+        //         ] 
+        //     ]);
+        // }
     }
     // 客户端消息 转给 worker
     protected function _client_message($connection, $msg)
     {
         // todo worker 发送消息 
-        ConnectionManager::instance('worker')->randSendToConnection([
+        $state = ConnectionManager::instance('worker')->randSendToConnection([
             'event' => 'client_message',
             'data' => [
                 'client_id' => $connection->_id,
@@ -151,6 +162,14 @@ class Master extends Base
                 'message' => $msg
             ]
         ]);
+
+        // 说明没有worker，没必要在再去实现，理论上会有worker
+        // if (!$state) {
+        //     Worker::instance('master')->emit('clientMessage', [
+        //         $connection->_id,
+        //         $msg
+        //     ]);
+        // }
 
     }
     // 客户端关闭 转给 worker
@@ -160,7 +179,7 @@ class Master extends Base
         if (ConnectionManager::instance('client')->getConnectionBy_Id($connection->_id)) {
             ConnectionManager::instance('client')->closeConnection($connection);
 
-            ConnectionManager::instance('worker')->randSendToConnection([
+            $state = ConnectionManager::instance('worker')->randSendToConnection([
                 'event' => 'client_close',
                 'data' => [
                     'client_id' => $connection->_id,
@@ -171,6 +190,17 @@ class Master extends Base
                     ]
                 ]
             ]);
+
+            // // 说明没有worker，没必要在再去实现，理论上会有worker
+            // if (!$state) {
+            //     Worker::instance('master')->emit('clientClose', [
+            //         $connection->_id,
+            //         [
+            //             'getIdBy_Id' => ConnectionManager::instance('client')->getIdBy_Id($connection->_id),
+            //             'getGroupIdsBy_Id' => ConnectionManager::instance('client')->getGroupIdsBy_Id($connection->_id)
+            //         ]
+            //     ]);
+            // }
     
         }
         

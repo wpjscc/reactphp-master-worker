@@ -38,7 +38,7 @@ $worker->on('clientMessage', function ($_id, $message) {
     try {
         $data = json_decode($message, true);
         if (isset($data['event_type']) && !in_array($data['event_type'], ['open', 'close'])) {
-            var_dump($data);
+            var_dump('onClientMessage');
             Chat::instance()->emit($data['event_type'], [$_id, $data['data'] ?? []]);
         }
     } catch (\Throwable $th) {
@@ -77,7 +77,26 @@ $worker->on('clientClose', function ($_id, $data) {
 $chat = Chat::instance();
 
 $chat->on('message', function($_id, $data){
-
+    $roomId= $data['roomId'] ?? '';
+    var_dump('room_id', $roomId);
+    if ($roomId){
+        Client::instance('worker')->sendToGroup($roomId, [
+            'event_type' => 'message',
+            'data' => $data
+        ], [
+            
+        ], [
+            $_id
+        ]);
+    } else {
+        Client::instance('worker')->sendToClient($_id, [
+            'event_type' => 'message',
+            'data' => [
+                'client_id' => $_id,
+                'msg' => '【worker系统消息】已接收到消息-'.$data['value'] ?? ''
+            ]
+        ]);
+    }
 });
 
 
